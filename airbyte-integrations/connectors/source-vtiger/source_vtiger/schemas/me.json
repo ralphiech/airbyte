@@ -1,0 +1,221 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [],
+    "properties": {
+        "success": {
+            "type": "boolean"
+        },
+        "result" : {
+            "type": "object",
+            "properties": {
+                "user_name": {
+                    "type": ["null", "string"]
+                },
+                "is_admin": {
+                    "type": ["null", "string"]
+                },
+                "first_name": {
+                    "type": ["null", "string"]
+                },
+                "last_name": {
+                    "type": ["null", "string"]
+                },
+                "roleid": {
+                    "type": ["null", "string"]
+                },
+                "email1": {
+                    "type": ["null", "string"],
+                    "format": "idn-email"
+                },
+                "status": {
+                    "type": ["null", "string"]
+                },
+                "activity_view": {
+                    "type": ["null", "string"]
+                },
+                "currency_id": {
+                    "type": ["null", "string"]
+                },
+                "hour_format": {
+                    "type": ["null", "string"]
+                },
+                "end_hour": {
+                    "type": ["null", "string"]
+                },
+                "start_hour": {
+                    "type": ["null", "string"]
+                },
+                "title": {
+                    "type": ["null", "string"]
+                },
+                "phone_work": {
+                    "type": ["null", "string"]
+                },
+                "department": {
+                    "type": ["null", "string"]
+                },
+                "phone_mobile": {
+                    "type": ["null", "string"]
+                },
+                "reports_to_id": {
+                    "type": ["null", "string"]
+                },
+                "phone_other": {
+                    "type": ["null", "string"]
+                },
+                "email2": {
+                    "type": ["null", "string"]
+                },
+                "phone_fax": {
+                    "type": ["null", "string"]
+                },
+                "secondaryemail": {
+                    "type": ["null", "string"],
+                    "format": "idn-email"
+                },
+                "phone_home": {
+                    "type": ["null", "string"]
+                },
+                "date_format": {
+                    "type": ["null", "string"]
+                },
+                "signature": {
+                    "type": ["null", "string"]
+                },
+                "address_street": {
+                    "type": ["null", "string"]
+                },
+                "address_city": {
+                    "type": ["null", "string"]
+                },
+                "address_state": {
+                    "type": ["null", "string"]
+                },
+                "address_postalcode": {
+                    "type": ["null", "string"]
+                },
+                "address_country": {
+                    "type": ["null", "string"]
+                },
+                "imagename": {
+                    "type": ["null", "string"]
+                },
+                "internal_mailer": {
+                    "type": ["null", "string"]
+                },
+                "theme": {
+                    "type": ["null", "string"]
+                },
+                "language": {
+                    "type": ["null", "string"]
+                },
+                "reminder_interval": {
+                    "type": ["null", "string"]
+                },
+                "asterisk_extension": {
+                    "type": ["null", "string"]
+                },
+                "time_zone": {
+                    "type": ["null", "string"]
+                },
+                "currency_grouping_pattern": {
+                    "type": ["null", "string"]
+                },
+                "currency_decimal_separator": {
+                    "type": ["null", "string"]
+                },
+                "currency_grouping_separator": {
+                    "type": ["null", "string"]
+                },
+                "currency_symbol_placement": {
+                    "type": ["null", "string"]
+                },
+                "no_of_currency_decimals": {
+                    "type": ["null", "string"]
+                },
+                "truncate_trailing_zeros": {
+                    "type": ["null", "string"]
+                },
+                "dayoftheweek": {
+                    "type": ["null", "string"]
+                },
+                "callduration": {
+                    "type": ["null", "string"]
+                },
+                "othereventduration": {
+                    "type": ["null", "string"]
+                },
+                "calendarsharedtype": {
+                    "type": ["null", "string"]
+                },
+                "default_record_view": {
+                    "type": ["null", "string"]
+                },
+                "leftpanelhide": {
+                    "type": ["null", "string"]
+                },
+                "is_owner": {
+                    "type": ["null", "string"]
+                },
+                "rowheight": {
+                    "type": ["null", "string"]
+                },
+                "defaulteventstatus": {
+                    "type": ["null", "string"]
+                },
+                "defaultactivitytype": {
+                    "type": ["null", "string"]
+                },
+                "hidecompletedevents": {
+                    "type": ["null", "string"]
+                },
+                "defaultcalendarview": {
+                    "type": ["null", "string"]
+                },
+                "collapsemodulemenu": {
+                    "type": ["null", "string"]
+                },
+                "learning_score": {
+                    "type": ["null", "string"]
+                },
+                "user_primary_group": {
+                    "type": ["null", "string"]
+                },
+                "business_hours": {
+                    "type": ["null", "string"]
+                },
+                "display_preference_currency": {
+                    "type": ["null", "string"]
+                },
+                "defaultlandingpage": {
+                    "type": ["null", "string"]
+                },
+                "signature_before_quoted_text": {
+                    "type": ["null", "string"]
+                },
+                "user_type": {
+                    "type": ["null", "string"]
+                },
+                "userlabel": {
+                    "type": ["null", "string"]
+                },
+                "currency_name": {
+                    "type": ["null", "string"]
+                },
+                "currency_code": {
+                    "type": ["null", "string"]
+                },
+                "currency_symbol": {
+                    "type": ["null", "string"]
+                },
+                "conv_rate": {
+                    "type": ["null", "string"]
+                },
+                "id": {
+                    "type": ["null", "string"]
+                }
+            }
+        }
+	}
+}

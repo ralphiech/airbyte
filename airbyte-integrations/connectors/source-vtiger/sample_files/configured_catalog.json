@@ -1,0 +1,53 @@
+{
+    "streams": [
+      {
+        "sync_mode": "full_refresh",
+        "destination_sync_mode": "overwrite",
+        "stream": {
+          "name": "me",
+          "supported_sync_modes": [
+            "full_refresh"
+          ],
+          "source_defined_cursor": false,
+          "json_schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "success": {
+                    "type": "boolean"
+                },
+                "result" : {
+                    "type": "object",
+                    "properties": {
+                        "user_name": {
+                            "type": ["null", "string"]
+                        },
+                        "is_admin": {
+                            "type": ["null", "string"]
+                        },
+                        "first_name": {
+                            "type": ["null", "string"]
+                        },
+                        "last_name": {
+                            "type": ["null", "string"]
+                        },
+                        "roleid": {
+                            "type": ["null", "string"]
+                        },
+                        "email1": {
+                            "type": ["null", "string"],
+                            "format": "idn-email"
+                        }
+                    }
+                }
+            }
+          }
+        }
+      }
+    ]
+  }
+
+
+
+    
+        
