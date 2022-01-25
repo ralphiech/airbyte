@@ -99,6 +99,16 @@ class Me(VtigerStream):
     ) -> str:
         return "me"
 
+class Calendar(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20Calendar%3B"
+
 # Source
 class SourceVtiger(AbstractSource):
     def check_connection(self, logger, config) -> Tuple[bool, any]:
@@ -119,4 +129,7 @@ class SourceVtiger(AbstractSource):
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
         auth = BasicApiTokenAuthenticator(username=config['username'], password=config['accessKey'])
         host = config['host']
-        return [Me(host=host, authenticator=auth)]
+        return [
+                Me(host=host, authenticator=auth),
+                # Calendar(host=host, authenticator=auth)
+            ]
