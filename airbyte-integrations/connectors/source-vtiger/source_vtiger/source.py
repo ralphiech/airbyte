@@ -99,6 +99,17 @@ class Me(VtigerStream):
     ) -> str:
         return "me"
 
+class Leads(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20Leads%3B"
+
+
 class Calendar(VtigerStream):
     primary_key = None
 
@@ -118,11 +129,11 @@ class SourceVtiger(AbstractSource):
         
         #todo improve validation
         if not host:
-            return False, f"Input host is required"
+            return False, "Input host is required"
         if not username:
-            return False, f"Input username is required"
+            return False, "Input username is required"
         if not access_key:
-            return False, f"Input access key is required"
+            return False, "Input access key is required"
             
         return True, None
 
@@ -130,6 +141,7 @@ class SourceVtiger(AbstractSource):
         auth = BasicApiTokenAuthenticator(username=config['username'], password=config['accessKey'])
         host = config['host']
         return [
-                Me(host=host, authenticator=auth),
+                Leads(host=host, authenticator=auth),
+                Me(host=host, authenticator=auth)
                 # Calendar(host=host, authenticator=auth)
             ]
