@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "fld_program_3225": {
+              "type": ["null", "string"]
+            },
+            "assigned_user_id": {
+              "type": ["null", "string"]
+            },
+            "fld_isclosed_3227": {
+              "type": ["null", "string"]
+            },
+            "modifiedby": {
+              "type": ["null", "string"]
+            },
+            "starred": {
+              "type": ["null", "string"]
+            },
+            "record_currency_id": {
+              "type": ["null", "string"]
+            },
+            "record_conversion_rate": {
+              "type": ["null", "string"]
+            },
+            "tags": {
+              "type": ["null", "string"]
+            },
+            "cf_vtcmprograms_person": {
+              "type": ["null", "string"]
+            },
+            "cf_vtcmprograms_situationmulti": {
+              "type": ["null", "string"]
+            },
+            "fld_closingdate": {
+              "type": ["null", "string"]
+            },
+            "fld_closingreason": {
+              "type": ["null", "string"]
+            },
+            "fld_nextsteporjobtaken": {
+              "type": ["null", "string"]
+            },
+            "fld_highestfinishedgrade": {
+              "type": ["null", "string"]
+            },
+            "fld_lastdayatschool": {
+              "type": ["null", "string"]
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "created_user_id": {
+              "type": ["null", "string"]
+            },
+            "createdtime": {
+              "type": ["null", "string"]
+            },
+            "vtcmprogramsnumber": {
+              "type": ["null", "string"]
+            },
+            "modifiedtime": {
+              "type": ["null", "string"]
+            },
+            "fld_vtcmprogramsname": {
+              "type": ["null", "string"]
+            },
+            "id": {
+              "type": ["null", "string"]
+            },
+            "isclosed": {
+              "type": ["null", "string"]
+            },
+            "record_currency_symbol": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

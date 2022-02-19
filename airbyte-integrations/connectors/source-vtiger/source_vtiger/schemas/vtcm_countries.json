@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties":
+  {
+    "success":
+    {
+      "type": "boolean"
+    },
+    "result":
+    {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties":
+          {
+            "fld_vtcmcountriesname":
+            {
+              "type": "string",
+              "title": "Country Name",
+              "description": "Country Name",
+              "default": ""
+            },
+            "createdtime":
+            {
+              "type": "string",
+              "title": "Created Time",
+              "description": "Created Time",
+              "default": ""
+            },
+            "modifiedtime":
+            {
+              "type": "string",
+              "title": "Modified Time",
+              "description": "Modified Time",
+              "default": ""
+            },
+            "created_user_id":
+            {
+              "type": "string",
+              "title": "Created By",
+              "description": "Created By",
+              "default": ""
+            },
+            "assigned_user_id":
+            {
+              "type": "string",
+              "title": "Assigned To",
+              "description": "Assigned To",
+              "default": ""
+            },
+            "modifiedby":
+            {
+              "type": "string",
+              "title": "Last Modified By",
+              "description": "Last Modified By",
+              "default": ""
+            },
+            "vtcmcountriesnumber":
+            {
+              "type": "string",
+              "title": "Country Number",
+              "description": "Country Number",
+              "default": ""
+            },
+            "source":
+            {
+              "type": "string",
+              "title": "Source",
+              "description": "Source",
+              "default": ""
+            },
+            "starred":
+            {
+              "type": "string",
+              "title": "Following",
+              "description": "LBL_FOLLOWING",
+              "default": ""
+            },
+            "record_currency_id":
+            {
+              "type": "string",
+              "title": "Record Currency",
+              "description": "Record Currency",
+              "default": ""
+            },
+            "record_conversion_rate":
+            {
+              "type": "string",
+              "title": "Record Conversion Rate",
+              "description": "Record Conversion Rate",
+              "default": ""
+            },
+            "fld_currency_1504":
+            {
+              "type": "string",
+              "title": "Currency",
+              "description": "Currency",
+              "default": ""
+            },
+            "id":
+            {
+              "type": "string",
+              "title": "vtcmcountriesid",
+              "description": "",
+              "default": ""
+            },
+            "tags":
+            {
+              "type": "string"
+            },
+            "isclosed":
+            {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -109,6 +109,99 @@ class Leads(VtigerStream):
     ) -> str:
         return "query?query=select%20*%20from%20Leads%3B"
 
+class VtcmPrograms(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmprograms%3B"
+
+
+class VtcmVillages(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmvillages%3B"
+
+
+class VtcmFamilies(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmfamilies%3B"
+
+
+class VtcmCountries(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmcountries%3B"
+
+class VtcmChildren(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmchildren%3B"
+
+class VtcmEducation(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmeducation%3B"
+
+class VtcmMedicalcases(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20vtcmmedicalcases%3B"
+
+class Documents(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20Documents%3B"
+
+class Comments(VtigerStream):
+    primary_key = None
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "query?query=select%20*%20from%20ModComments%3B"
+
 
 class Calendar(VtigerStream):
     primary_key = None
@@ -142,6 +235,15 @@ class SourceVtiger(AbstractSource):
         host = config['host']
         return [
                 Leads(host=host, authenticator=auth),
+                VtcmPrograms(host=host, authenticator=auth),
+                VtcmVillages(host=host, authenticator=auth),
+                VtcmFamilies(host=host, authenticator=auth),
+                VtcmCountries(host=host, authenticator=auth),
+                VtcmChildren(host=host, authenticator=auth),
+                VtcmEducation(host=host, authenticator=auth),
+                VtcmMedicalcases(host=host, authenticator=auth),
+                Documents(host=host, authenticator=auth),
+                Comments(host=host, authenticator=auth),
                 Me(host=host, authenticator=auth)
                 # Calendar(host=host, authenticator=auth)
             ]

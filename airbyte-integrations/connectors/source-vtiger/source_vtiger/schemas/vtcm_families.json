@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties":
+  {
+    "success":
+    {
+      "type": "boolean"
+    },
+    "result":
+    {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties":
+          {
+            "fld_vtcmfamiliesname":
+            {
+              "type": "string",
+              "title": "Name",
+              "description": "Family Identifier",
+              "default": "0"
+            },
+            "assigned_user_id":
+            {
+              "type": "string",
+              "title": "Assigned To",
+              "description": "Assigned To",
+              "default": ""
+            },
+            "cf_vtcmfamilies_village":
+            {
+              "type": "string",
+              "title": "Village",
+              "description": "Village",
+              "default": ""
+            },
+            "cf_vtcmfamilies_familyfolder":
+            {
+              "type": "string",
+              "title": "Family Folder",
+              "description": "Family Folder",
+              "default": ""
+            },
+            "fld_familyname":
+            {
+              "type": "string",
+              "title": "Family Name",
+              "description": "Family Name",
+              "default": ""
+            },
+            "modifiedby":
+            {
+              "type": "string",
+              "title": "Last Modified By",
+              "description": "Last Modified By",
+              "default": ""
+            },
+            "cf_vtcmfamilies_status":
+            {
+              "type": "string",
+              "title": "Status",
+              "description": "Status",
+              "default": ""
+            },
+            "cf_vtcmfamilies_id":
+            {
+              "type": "string",
+              "title": "Old ID",
+              "description": "ID",
+              "default": ""
+            },
+            "cf_vtcmfamilies_poorcard":
+            {
+              "type": "string",
+              "title": "Poverty Card",
+              "description": "Poor Card",
+              "default": "0"
+            },
+            "vtcmfamiliesnumber":
+            {
+              "type": "string",
+              "title": "Number",
+              "description": "Family Number",
+              "default": ""
+            },
+            "starred":
+            {
+              "type": "string",
+              "title": "Following",
+              "description": "LBL_FOLLOWING",
+              "default": ""
+            },
+            "record_currency_id":
+            {
+              "type": "string",
+              "title": "Record Currency",
+              "description": "Record Currency",
+              "default": ""
+            },
+            "record_conversion_rate":
+            {
+              "type": "string",
+              "title": "Record Conversion Rate",
+              "description": "Record Conversion Rate",
+              "default": ""
+            },
+            "fld_category_1452":
+            {
+              "type": "string",
+              "title": "Family Score",
+              "description": "Category",
+              "default": ""
+            },
+            "cf_vtcmfamilies_primarycaregiver":
+            {
+              "type": "string",
+              "title": "Primary Caregiver",
+              "description": "Primary Caregiver",
+              "default": ""
+            },
+            "cf_vtcmfamilies_famdescription":
+            {
+              "type": "string",
+              "title": "Fam. Description",
+              "description": "Fam. Description",
+              "default": ""
+            },
+            "fld_toilet_1454":
+            {
+              "type": "string",
+              "title": "Toilet",
+              "description": "Toilet",
+              "default": ""
+            },
+            "fld_drinkingwater_1456":
+            {
+              "type": "string",
+              "title": "Drinking Water",
+              "description": "Drinking Water",
+              "default": ""
+            },
+            "cf_vtcmfamilies_income":
+            {
+              "type": "string",
+              "title": "Income",
+              "description": "Income",
+              "default": ""
+            },
+            "cf_vtcmfamilies_waterfilter":
+            {
+              "type": "string",
+              "title": "Waterfilter",
+              "description": "Waterfilter",
+              "default": "0"
+            },
+            "cf_vtcmfamilies_cppchurchparticipationpermission":
+            {
+              "type": "string",
+              "title": "CPP (Church Participation Permission)",
+              "description": "CPP (Church Participation Permission)",
+              "default": "0"
+            },
+            "source":
+            {
+              "type": "string",
+              "title": "Source",
+              "description": "Source",
+              "default": ""
+            },
+            "createdtime":
+            {
+              "type": "string",
+              "title": "Created Time",
+              "description": "Created Time",
+              "default": ""
+            },
+            "modifiedtime":
+            {
+              "type": "string",
+              "title": "Modified Time",
+              "description": "Modified Time",
+              "default": ""
+            },
+            "created_user_id":
+            {
+              "type": "string",
+              "title": "Created By",
+              "description": "Created By",
+              "default": ""
+            },
+            "id":
+            {
+              "type": "string",
+              "title": "vtcmfamiliesid",
+              "description": "",
+              "default": ""
+            }
+          }
+        }
+      ]
+    }
+  }
+}

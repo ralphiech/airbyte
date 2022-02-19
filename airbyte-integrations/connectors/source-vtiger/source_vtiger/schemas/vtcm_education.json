@@ -1,0 +1,218 @@
+
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties":
+  {
+    "success":
+    {
+      "type": "boolean"
+    },
+    "result":
+    {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties":
+          {
+            "cf_vtcmeducation_person":
+            {
+              "type": "string",
+              "title": "Person",
+              "description": "Person",
+              "default": ""
+            },
+            "cf_vtcmeducation_family":
+            {
+              "type": "string",
+              "title": "Family",
+              "description": "Family",
+              "default": ""
+            },
+            "fld_type_3267":
+            {
+              "type": "string",
+              "title": "Type",
+              "description": "Type",
+              "default": ""
+            },
+            "assigned_user_id":
+            {
+              "type": "string",
+              "title": "Assigned To",
+              "description": "Assigned To",
+              "default": ""
+            },
+            "modifiedby":
+            {
+              "type": "string",
+              "title": "Last Modified By",
+              "description": "Last Modified By",
+              "default": ""
+            },
+            "starred":
+            {
+              "type": "string",
+              "title": "Following",
+              "description": "LBL_FOLLOWING",
+              "default": ""
+            },
+            "record_currency_id":
+            {
+              "type": "string",
+              "title": "Record Currency",
+              "description": "Record Currency",
+              "default": ""
+            },
+            "record_conversion_rate":
+            {
+              "type": "string",
+              "title": "Record Conversion Rate",
+              "description": "Record Conversion Rate",
+              "default": ""
+            },
+            "fld_startdate":
+            {
+              "type": "string",
+              "title": "Start date",
+              "description": "Start date",
+              "default": ""
+            },
+            "fld_enddate":
+            {
+              "type": "string",
+              "title": "End date",
+              "description": "End date",
+              "default": ""
+            },
+            "cf_vtcmeducation_workspace":
+            {
+              "type": "string",
+              "title": "Workspace",
+              "description": "Workspace",
+              "default": ""
+            },
+            "fld_role_3271":
+            {
+              "type": "string",
+              "title": "Role (Scholarship)",
+              "description": "Role",
+              "default": ""
+            },
+            "cf_vtcmeducation_tutor":
+            {
+              "type": "string",
+              "title": "Role (Tutor)",
+              "description": "Tutor",
+              "default": ""
+            },
+            "cf_vtcmeducation_capacitytraining":
+            {
+              "type": "string",
+              "title": "Capacity Training",
+              "description": "Capacity Training",
+              "default": ""
+            },
+            "fld_year_3279":
+            {
+              "type": "string",
+              "title": "Year",
+              "description": "Year",
+              "default": ""
+            },
+            "cf_vtcmeducation_school":
+            {
+              "type": "string",
+              "title": "School",
+              "description": "School",
+              "default": ""
+            },
+            "fld_month_3281":
+            {
+              "type": "string",
+              "title": "Month",
+              "description": "Month",
+              "default": ""
+            },
+            "cf_vtcmeducation_grade":
+            {
+              "type": "string",
+              "title": "Grade",
+              "description": "Grade",
+              "default": ""
+            },
+            "cf_vtcmeducation_performance":
+            {
+              "type": "string",
+              "title": "Performance",
+              "description": "Performance",
+              "default": ""
+            },
+            "fld_vtcmeducationname":
+            {
+              "type": "string",
+              "title": "Record",
+              "description": "Record",
+              "default": "(generated)"
+            },
+            "created_user_id":
+            {
+              "type": "string",
+              "title": "Created By",
+              "description": "Created By",
+              "default": ""
+            },
+            "createdtime":
+            {
+              "type": "string",
+              "title": "Created Time",
+              "description": "Created Time",
+              "default": ""
+            },
+            "modifiedtime":
+            {
+              "type": "string",
+              "title": "Modified Time",
+              "description": "Modified Time",
+              "default": ""
+            },
+            "vtcmeducationnumber":
+            {
+              "type": "string",
+              "title": "Education Number",
+              "description": "Education Number",
+              "default": ""
+            },
+            "source":
+            {
+              "type": "string",
+              "title": "Source",
+              "description": "Source",
+              "default": ""
+            },
+            "id":
+            {
+              "type": "string",
+              "title": "vtcmeducationid",
+              "description": "",
+              "default": ""
+            },
+            "tags":
+            {
+              "type": "string"
+            },
+            "isclosed":
+            {
+              "type": "string"
+            },
+            "record_currency_symbol":
+            {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
