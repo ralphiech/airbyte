@@ -160,7 +160,8 @@
               "type": "string",
               "title": "CPP (Church Participation Permission)",
               "description": "CPP (Church Participation Permission)",
-              "default": "0"
+              "default": "0",
+              "db_name": "cf_vtcmfamilies_cppc__rticipationpermission"
             },
             "source":
             {

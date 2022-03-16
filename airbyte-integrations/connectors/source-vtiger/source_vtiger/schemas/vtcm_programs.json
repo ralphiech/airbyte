@@ -11,76 +11,179 @@
         {
           "type": "object",
           "properties": {
-            "fld_program_3225": {
-              "type": ["null", "string"]
-            },
-            "assigned_user_id": {
-              "type": ["null", "string"]
-            },
-            "fld_isclosed_3227": {
-              "type": ["null", "string"]
-            },
-            "modifiedby": {
-              "type": ["null", "string"]
-            },
-            "starred": {
-              "type": ["null", "string"]
-            },
-            "record_currency_id": {
-              "type": ["null", "string"]
-            },
-            "record_conversion_rate": {
-              "type": ["null", "string"]
-            },
-            "tags": {
-              "type": ["null", "string"]
-            },
-            "cf_vtcmprograms_person": {
-              "type": ["null", "string"]
-            },
-            "cf_vtcmprograms_situationmulti": {
-              "type": ["null", "string"]
-            },
-            "fld_closingdate": {
-              "type": ["null", "string"]
-            },
-            "fld_closingreason": {
-              "type": ["null", "string"]
-            },
-            "fld_nextsteporjobtaken": {
-              "type": ["null", "string"]
-            },
-            "fld_highestfinishedgrade": {
-              "type": ["null", "string"]
-            },
-            "fld_lastdayatschool": {
-              "type": ["null", "string"]
-            },
-            "source": {
-              "type": ["null", "string"]
-            },
-            "created_user_id": {
-              "type": ["null", "string"]
-            },
-            "createdtime": {
-              "type": ["null", "string"]
-            },
-            "vtcmprogramsnumber": {
-              "type": ["null", "string"]
-            },
-            "modifiedtime": {
-              "type": ["null", "string"]
-            },
-            "fld_vtcmprogramsname": {
-              "type": ["null", "string"]
-            },
-            "id": {
-              "type": ["null", "string"]
-            },
+             "fld_program_3225": {
+              "type": "string",
+              "title": "Program",
+              "description": "Program",
+              "default": ""
+            }
+            ,"assigned_user_id": {
+              "type": "string",
+              "title": "Assigned To",
+              "description": "Assigned To",
+              "default": ""
+            }
+            ,"fld_isclosed_3227": {
+              "type": "string",
+              "title": "Is closed",
+              "description": "Is closed",
+              "default": "No"
+            }
+            ,"modifiedby": {
+              "type": "string",
+              "title": "Last Modified By",
+              "description": "Last Modified By",
+              "default": ""
+            }
+            ,"starred": {
+              "type": "string",
+              "title": "Following",
+              "description": "LBL_FOLLOWING",
+              "default": ""
+            }
+            ,"record_currency_id": {
+              "type": "string",
+              "title": "Record Currency",
+              "description": "Record Currency",
+              "default": ""
+            }
+            ,"record_conversion_rate": {
+              "type": "string",
+              "title": "Record Conversion Rate",
+              "description": "Record Conversion Rate",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_person": {
+              "type": "string",
+              "title": "Person",
+              "description": "Person",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_families": {
+              "type": "string",
+              "title": "Families",
+              "description": "Families",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_startdate": {
+              "type": "string",
+              "title": "Start Date",
+              "description": "Start Date",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_lengthofsupport": {
+              "type": "string",
+              "title": "Length of support",
+              "description": "Length of support",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_respsstotrainnutritioninfo": {
+              "type": "string",
+              "title": "Resp. SS to train Nutrition Info",
+              "description": "Resp. SS to train Nutrition Info",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_packagecontent": {
+              "type": "string",
+              "title": "Package Content",
+              "description": "Package Content",
+              "default": ""
+            }
+            ,"cf_3318": {
+              "type": "string",
+              "title": "Describe the goal to reach during the support",
+              "description": "Describe the goal to reach during the support",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_situationmulti": {
+              "type": "string",
+              "title": "Situation",
+              "description": "Situation (multi)",
+              "default": ""
+            }
+            ,"fld_closingdate": {
+              "type": "string",
+              "title": "Closing date",
+              "description": "Closing date",
+              "default": ""
+            }
+            ,"cf_vtcmprograms_familysituation": {
+              "type": "string",
+              "title": "Family situation",
+              "description": "Family situation",
+              "default": ""
+            }
+            ,"fld_closingreason": {
+              "type": "string",
+              "title": "Closing reason (more information)",
+              "description": "Closing reason",
+              "default": ""
+            }
+            ,"fld_highestfinishedgrade": {
+              "type": "string",
+              "title": "Highest finished grade",
+              "description": "Highest Finished Grade",
+              "default": ""
+            }
+            ,"fld_nextsteporjobtaken": {
+              "type": "string",
+              "title": "Next step  or job taken",
+              "description": "Next step  or job taken",
+              "default": ""
+            }
+            ,"fld_lastdayatschool": {
+              "type": "string",
+              "title": "Last day at school",
+              "description": "Last day at school",
+              "default": ""
+            }
+            ,"source": {
+              "type": "string",
+              "title": "Source",
+              "description": "Source",
+              "default": ""
+            }
+            ,"created_user_id": {
+              "type": "string",
+              "title": "Created By",
+              "description": "Created By",
+              "default": ""
+            }
+            ,"createdtime": {
+              "type": "string",
+              "title": "Created Time",
+              "description": "Created Time",
+              "default": ""
+            }
+            ,"vtcmprogramsnumber": {
+              "type": "string",
+              "title": "Program Number",
+              "description": "Program Number",
+              "default": ""
+            }
+            ,"modifiedtime": {
+              "type": "string",
+              "title": "Modified Time",
+              "description": "Modified Time",
+              "default": ""
+            }
+            ,"fld_vtcmprogramsname": {
+              "type": "string",
+              "title": "Program ID",
+              "description": "Program ID",
+              "default": "generated"
+            }
+            ,"id": {
+              "type": "string",
+              "title": "vtcmprogramsid",
+              "description": "",
+              "default": ""
+            }
+            ,
             "isclosed": {
               "type": ["null", "string"]
             },
-            "record_currency_symbol": {
+            "tags": {
               "type": ["null", "string"]
             }
           }
