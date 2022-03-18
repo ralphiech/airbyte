@@ -66,14 +66,15 @@ for file in os.listdir(path):
         create_view = create_view + f"\n  FROM {source_table_name};\n"
         create_view = create_view + comments
         print(create_view)
-        with open(path + "\\vw_" + short_view_name + ".sql", "w") as write_file:
-            write_file.write(create_view)
+        # if you need a file with only the view creation uncomment this
+        # with open(path + "\\dbg_vw_" + short_view_name + ".sql", "w") as write_file:
+        #     write_file.write(create_view)
 
         procedure_name = f"public.prc_create_vw_{short_view_name}"
         create_procedure = f"CREATE OR REPLACE PROCEDURE {procedure_name}() AS\n$$\n" + create_view
         create_procedure = create_procedure + "\n$$\nLANGUAGE sql;"
 
-        with open(f"{path}\\prc_create_vw_{short_view_name}.sql", "w") as write_file:
+        with open(f"{path}\\01_prc_create_vw_{short_view_name}.sql", "w") as write_file:
             write_file.write(create_procedure)
 
         body_append = f"""      IF r.object_identity = '{source_table_name}'
@@ -99,5 +100,18 @@ END;
 $$;
 """
 
-with open(f"{path}\\event_function.sql", "w") as write_file:
+with open(f"{path}\\02_event_function.sql", "w") as write_file:
     write_file.write(event_function)
+
+event_trigger_ddl = """DROP EVENT TRIGGER IF EXISTS ev_create_views;
+CREATE EVENT TRIGGER ev_create_views ON ddl_command_end WHEN TAG IN ('CREATE TABLE', 'ALTER TABLE', 'CREATE TABLE AS')
+EXECUTE FUNCTION  public.fun_ev_create_views();
+"""
+
+with open(f"{path}\\03_ev_trg_create_views.sql", "w") as write_file:
+    write_file.write(event_trigger_ddl)
+
+schema_ddl = """CREATE SCHEMA IF NOT EXISTS reports AUTHORIZATION postgres;"""
+
+with open(f"{path}\\00_create_schema.sql", "w") as write_file:
+    write_file.write(schema_ddl)
