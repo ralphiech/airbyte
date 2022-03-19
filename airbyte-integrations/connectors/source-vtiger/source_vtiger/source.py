@@ -22,6 +22,12 @@ class BasicApiTokenAuthenticator(TokenAuthenticator):
 # Basic full refresh stream
 class VtigerStream(HttpStream, ABC):
     url_base = ""
+    current_page = 1
+    # batch / page size. it is recommended to use 100 as this is the implicit maximum by the vtiger api
+    # https://help.vtiger.com/article/147111249-Rest-API-Manual#articleHeader19
+    batch_size = 100
+
+    primary_key = "id"
 
     def __init__(self, host: str, authenticator: Union[AuthBase, HttpAuthenticator] = None):
         self.url_base = f"https://{host}/restapi/v1/vtiger/default/"
@@ -43,7 +49,30 @@ class VtigerStream(HttpStream, ABC):
         :return If there is another page in the result, a mapping (e.g: dict) containing information needed to query the next page in the response.
                 If there are no more pages in the result, return None.
         """
+
+        returned_record_count = len(response.json()['result'])
+        if self.batch_size == returned_record_count:
+            self.current_page = self.current_page + 1
+            return {
+                'limit': self.batch_size,
+                'offset': (self.current_page * self.batch_size) - self.batch_size
+            }
+        self.current_page = 1
         return None
+
+
+    def get_query_url_string(self, model: str, next_page_token: Any) -> str:
+        if next_page_token is None:
+            limit = self.batch_size
+            offset = 0
+        else:
+            limit = next_page_token['limit']
+            offset = next_page_token['offset']
+
+        self.logger.info("Getting: {} / page {}".format(model,self.current_page))
+        # self.logger.info("query?query=select%20*%20from%20{}%20limit%20{},{}%3B".format(model, str(offset), str(limit)))
+        return "query?query=select%20*%20from%20{}%20limit%20{},{}%3B".format(model, str(offset), str(limit))
+
 
     def request_params(
         self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
@@ -90,8 +119,6 @@ class IncrementalVtigerStream(VtigerStream, ABC):
         return {}
 
 class Me(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None, 
         stream_slice: Mapping[str, Any] = None, 
@@ -100,118 +127,92 @@ class Me(VtigerStream):
         return "me"
 
 class Leads(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20Leads%3B"
+        return self.get_query_url_string('Leads', next_page_token)
 
 class VtcmPrograms(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmprograms%3B"
-
+        return self.get_query_url_string('vtcmprograms', next_page_token)
 
 class VtcmVillages(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmvillages%3B"
-
+        return self.get_query_url_string('vtcmvillages', next_page_token)
 
 class VtcmFamilies(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmfamilies%3B"
-
+        return self.get_query_url_string('vtcmfamilies', next_page_token)
 
 class VtcmCountries(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmcountries%3B"
+        return self.get_query_url_string('vtcmcountries', next_page_token)
 
 class VtcmChildren(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmchildren%3B"
+        return self.get_query_url_string('vtcmchildren', next_page_token)
 
 class VtcmEducation(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmeducation%3B"
+        return self.get_query_url_string('vtcmeducation', next_page_token)
 
 class VtcmMedicalcases(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20vtcmmedicalcases%3B"
+        return self.get_query_url_string('vtcmmedicalcases', next_page_token)
 
 class Documents(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20Documents%3B"
+        return self.get_query_url_string('Documents', next_page_token)
 
 class Comments(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20ModComments%3B"
-
+        return self.get_query_url_string('ModComments', next_page_token)
 
 class Calendar(VtigerStream):
-    primary_key = None
-
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return "query?query=select%20*%20from%20Calendar%3B"
+        return self.get_query_url_string('Calendar', next_page_token)
 
 # Source
 class SourceVtiger(AbstractSource):
