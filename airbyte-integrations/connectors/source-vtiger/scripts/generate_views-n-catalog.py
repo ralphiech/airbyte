@@ -3,9 +3,9 @@ import os
 import re
 
 def generate_views():
-    # path_schemas = "C:\\Users\\ZoranStipanicev\\Documents\\vtcm_ddl_scripts"
-    path_schemas = "..\\source-vtiger\\schemas"
-    path_ddl_out = ".\\output-ddl"
+    # path_schemas = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
+    path_schemas = "../source-vtiger/schemas"
+    path_ddl_out = "./output-ddl"
     # path_ddl_out = os.getcwd() + path_ddl_out
 
     ev_func_body = ""
@@ -72,14 +72,14 @@ def generate_views():
             create_view = create_view + comments
             print(create_view)
             # if you need a file with only the view creation uncomment this
-            # with open(path_schemas + "\\dbg_vw_" + short_view_name + ".sql", "w") as write_file:
+            # with open(path_schemas + "/dbg_vw_" + short_view_name + ".sql", "w") as write_file:
             #     write_file.write(create_view)
 
             procedure_name = f"public.prc_create_vw_{short_view_name}"
             create_procedure = f"CREATE OR REPLACE PROCEDURE {procedure_name}() AS\n$$\n" + create_view
             create_procedure = create_procedure + "\n$$\nLANGUAGE sql;"
 
-            with open(f"{path_ddl_out}\\01_prc_create_vw_{short_view_name}.sql", "w") as write_file:
+            with open(f"{path_ddl_out}/01_prc_create_vw_{short_view_name}.sql", "w") as write_file:
                 write_file.write(create_procedure)
 
             body_append = f"""      IF r.object_identity = '{source_table_name}'
@@ -105,7 +105,7 @@ def generate_views():
     $$;
     """
 
-    with open(f"{path_ddl_out}\\02_event_function.sql", "w") as write_file:
+    with open(f"{path_ddl_out}/02_event_function.sql", "w") as write_file:
         write_file.write(event_function)
 
     event_trigger_ddl = """DROP EVENT TRIGGER IF EXISTS ev_create_views;
@@ -113,18 +113,18 @@ def generate_views():
     EXECUTE FUNCTION  public.fun_ev_create_views();
     """
 
-    with open(f"{path_ddl_out}\\03_ev_trg_create_views.sql", "w") as write_file:
+    with open(f"{path_ddl_out}/03_ev_trg_create_views.sql", "w") as write_file:
         write_file.write(event_trigger_ddl)
 
     schema_ddl = """CREATE SCHEMA IF NOT EXISTS reports AUTHORIZATION postgres;"""
 
-    with open(f"{path_ddl_out}\\00_create_schema.sql", "w") as write_file:
+    with open(f"{path_ddl_out}/00_create_schema.sql", "w") as write_file:
         write_file.write(schema_ddl)
 
 def generate_catalog():
-    # path = "C:\\Users\\ZoranStipanicev\\Documents\\vtcm_ddl_scripts"
-    path_schemas = "..\\source-vtiger\\schemas"
-    path_catalog_out = "..\\sample_files"
+    # path = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
+    path_schemas = "../source-vtiger/schemas"
+    path_catalog_out = "../sample_files"
     output_file_name = "configured_catalog.json"
     catalog_hdr = """{
       "streams": ["""
@@ -178,7 +178,7 @@ def generate_catalog():
     print("::: Loop End :::")
     output = catalog_hdr + catalog_bdy + catalog_ftr
     print(len(output))
-    with open(f"{path_catalog_out}\\{output_file_name}", "w") as write_file:
+    with open(f"{path_catalog_out}/{output_file_name}", "w") as write_file:
         write_file.write(output)
         write_file.close()
 
