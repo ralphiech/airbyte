@@ -4,9 +4,9 @@ import re
 
 def generate_views():
     # path_schemas = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
-    path_schemas = "../source-vtiger/schemas"
-    path_ddl_out = "./output-ddl"
-    # path_ddl_out = os.getcwd() + path_ddl_out
+    cwd = os.getcwd()
+    path_schemas = f"{cwd}/../source-vtiger/schemas"
+    path_ddl_out = f"{cwd}/./output-ddl"
 
     ev_func_body = ""
     for file in os.listdir(path_schemas):
@@ -123,8 +123,9 @@ def generate_views():
 
 def generate_catalog():
     # path = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
-    path_schemas = "../source-vtiger/schemas"
-    path_catalog_out = "../sample_files"
+    cwd = os.getcwd()
+    path_schemas = f"{cwd}/../source-vtiger/schemas"
+    path_catalog_out = f"{cwd}/../sample_files"
     output_file_name = "configured_catalog.json"
     catalog_hdr = """{
       "streams": ["""
