@@ -118,53 +118,119 @@ class IncrementalVtigerStream(VtigerStream, ABC):
         """
         return {}
 
-class Me(VtigerStream):
-    def path(
-        self, stream_state: Mapping[str, Any] = None, 
-        stream_slice: Mapping[str, Any] = None, 
-        next_page_token: Mapping[str, Any] = None
-    ) -> str:
-        return "me"
 
-class Leads(VtigerStream):
+
+class Accounts(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('Leads', next_page_token)
+        return self.get_query_url_string('Accounts', next_page_token)
 
-class VtcmPrograms(VtigerStream):
+class Calendar(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('vtcmprograms', next_page_token)
+        return self.get_query_url_string('Calendar', next_page_token)
 
-class VtcmVillages(VtigerStream):
+class Contacts(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('vtcmvillages', next_page_token)
+        return self.get_query_url_string('Contacts', next_page_token)
 
-class VtcmFamilies(VtigerStream):
+class Currency(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('vtcmfamilies', next_page_token)
+        return self.get_query_url_string('Currency', next_page_token)
 
-class VtcmCountries(VtigerStream):
+class DocumentFolders(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('vtcmcountries', next_page_token)
+        return self.get_query_url_string('DocumentFolders', next_page_token)
+
+class Documents(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('Documents', next_page_token)
+
+class EmailCampaigns(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('EmailCampaigns', next_page_token)
+
+class Invoice(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('Invoice', next_page_token)
+
+class LineItem(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('LineItem', next_page_token)
+
+class ModComments(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('ModComments', next_page_token)
+
+class Payments(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('Payments', next_page_token)
+
+class SalesOrder(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('SalesOrder', next_page_token)
+
+class Services(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('Services', next_page_token)
+
+class VtcmAccounts(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('vtcmaccounts', next_page_token)
 
 class VtcmChildren(VtigerStream):
     def path(
@@ -182,37 +248,30 @@ class VtcmEducation(VtigerStream):
     ) -> str:
         return self.get_query_url_string('vtcmeducation', next_page_token)
 
-class VtcmMedicalcases(VtigerStream):
+class VtcmFamilies(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('vtcmmedicalcases', next_page_token)
+        return self.get_query_url_string('vtcmfamilies', next_page_token)
 
-class Documents(VtigerStream):
+class VtcmForms(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('Documents', next_page_token)
+        return self.get_query_url_string('vtcmforms', next_page_token)
 
-class Comments(VtigerStream):
+class VtcmPrograms(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
         stream_slice: Mapping[str, Any] = None,
         next_page_token: Mapping[str, Any] = None
     ) -> str:
-        return self.get_query_url_string('ModComments', next_page_token)
+        return self.get_query_url_string('vtcmprograms', next_page_token)
 
-class Calendar(VtigerStream):
-    def path(
-        self, stream_state: Mapping[str, Any] = None,
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None
-    ) -> str:
-        return self.get_query_url_string('Calendar', next_page_token)
 
 # Source
 class SourceVtiger(AbstractSource):
@@ -235,16 +294,23 @@ class SourceVtiger(AbstractSource):
         auth = BasicApiTokenAuthenticator(username=config['username'], password=config['accessKey'])
         host = config['host']
         return [
-                Leads(host=host, authenticator=auth),
-                VtcmPrograms(host=host, authenticator=auth),
-                VtcmVillages(host=host, authenticator=auth),
-                VtcmFamilies(host=host, authenticator=auth),
-                VtcmCountries(host=host, authenticator=auth),
+                Accounts(host=host, authenticator=auth),
+                Calendar(host=host, authenticator=auth),
+                Contacts(host=host, authenticator=auth),
+                Currency(host=host, authenticator=auth),
+                DocumentFolders(host=host, authenticator=auth),
+                Documents(host=host, authenticator=auth),
+                EmailCampaigns(host=host, authenticator=auth),
+                Invoice(host=host, authenticator=auth),
+                LineItem(host=host, authenticator=auth),
+                ModComments(host=host, authenticator=auth),
+                Payments(host=host, authenticator=auth),
+                SalesOrder(host=host, authenticator=auth),
+                Services(host=host, authenticator=auth),
+                VtcmAccounts(host=host, authenticator=auth),
                 VtcmChildren(host=host, authenticator=auth),
                 VtcmEducation(host=host, authenticator=auth),
-                VtcmMedicalcases(host=host, authenticator=auth),
-                Documents(host=host, authenticator=auth),
-                Comments(host=host, authenticator=auth),
-                Me(host=host, authenticator=auth)
-                # Calendar(host=host, authenticator=auth)
+                VtcmFamilies(host=host, authenticator=auth),
+                VtcmForms(host=host, authenticator=auth),
+                VtcmPrograms(host=host, authenticator=auth)
             ]

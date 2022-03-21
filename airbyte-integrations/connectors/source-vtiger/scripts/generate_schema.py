@@ -5,15 +5,30 @@ import json
 import sys
 
 
-
 # add the vtiger modules you want to create schemas for here.
 # valid inputs are what the following endpoint returns: 
 # restapi/v1/vtiger/default/listtypes?fieldTypeList=nullParameters
 vtiger_types = [
-    # "Leads",
-    # "Contacts",
+    "Accounts",
+    "Calendar",
+    "Contacts",
+    "Currency",
+    "DocumentFolders",
+    "Documents",
+    "EmailCampaigns",
+    "Invoice",
+    "LineItem",
+    "ModComments",
+    "Payments",
+    "SalesOrder",
+    "Services",
+    "VtcmAccounts",
+    "VtcmChildren",
+    "VtcmEducation",
+    "VtcmFamilies",
+    "VtcmForms",
+    "VtcmPrograms"
 ]
-
 
 
 parser = argparse.ArgumentParser()
