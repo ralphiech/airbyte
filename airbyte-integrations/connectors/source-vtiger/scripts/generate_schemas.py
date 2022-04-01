@@ -137,50 +137,31 @@ def main():
     # add the vtiger modules you want to create schemas for here.
     # valid inputs are what the following endpoint returns:
     # restapi/v1/vtiger/default/listtypes?fieldTypeList=nullParameters
-    vtiger_types = [
-            # "Calendar",
-            # "Leads",
-            # "Accounts",
-            # "Contacts",
-            "Documents",
-            # "Emails",
-            # "PurchaseOrder",
-            # "SalesOrder",
-            # "Invoice",
-            # "Campaigns",
-            # "Events",
-            # "Services",
-            # "ModComments",
-            # "EmailCampaigns",
-            # "PrintTemplates",
-            # "EventForms",
-            # "Inbox",
-            # "Employees",
-            "vtcmfamilies"#,
-            # "vtcmcountries",
-            # "vtcmaccounts",
-            # "Payments",
-            # "vtcmchildren",
-            # "vtcmvillages",
-            # "vtcmmedicalcases",
-            # "SMSNotifier",
-            # "vtcmforms",
-            # "vtcmprograms",
-            # "vtcmeducation",
-            # "Groups",
-            # "Currency",
-            # "DocumentFolders",
-            # "CompanyDetails",
-            # "LineItem",
-            # "Tax",
-            # "ProductTaxes",
-            # "Roles"
-    ]
+
+    # sample schema config file
+    # {
+    #   "vtiger_types_list": ["Calendar"
+    #                       ],
+    #   "fields_config": {
+    #     "Calendar": {
+    #       "a_field_with_a_really_long_name_and_airbyte_shortens_it_in_db": {
+    #         "db_name": "a_field_with_a_rea_airbyte_shortens_it_in_db"
+    #       }
+    #     }
+    #   }
+    # }
+
     print("=== Main ===")
-    for entity in vtiger_types:
-        entity_details = get_entity_details(entity)
-        schema = gen_schema(entity_details)
-        write_schema(schema, entity.lower())
+    schema_config = read_json_secrets_file("schema.json")
+    if not "vtiger_types_list" in schema_config:
+        print("No vtiger type to process defined in the config file (secrets/schema.json)")
+    else:
+        vtiger_types = schema_config["vtiger_types_list"]
+        for entity in vtiger_types:
+            print(f"processing: {entity}")
+            entity_details = get_entity_details(entity)
+            schema = gen_schema(entity_details)
+            write_schema(schema, entity.lower())
 
 main()
 
