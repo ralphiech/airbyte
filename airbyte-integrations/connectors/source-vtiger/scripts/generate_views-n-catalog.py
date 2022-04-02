@@ -1,6 +1,8 @@
 import json
 import os
 import re
+from pathlib import Path
+
 
 def generate_views():
     # path_schemas = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
@@ -9,6 +11,9 @@ def generate_views():
     # path_schemas = f"{cwd}/../source-vtiger/schemas"
     path_ddl_out = os.path.abspath(os.path.join(cwd, 'output-ddl'))
     # path_ddl_out = f"{cwd}/./output-ddl"
+
+    # create the output directory if it does not exist yet
+    Path(path_ddl_out).mkdir(exist_ok=True)
 
     ev_func_body = ""
     print("path_schemas")

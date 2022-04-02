@@ -64,7 +64,7 @@ def gen_schema(in_json_details):
                   "title": "<label>",
                   "description": "<dblabel>",
                   "default": ""<db_name>
-                }
+                }<trailing_comma>
     """
 
 
@@ -76,7 +76,7 @@ def gen_schema(in_json_details):
     print(entity_name)
     print("========================================")
     all_fields = ""
-    for fld in data["result"]["fields"]:
+    for idx,fld in enumerate(data["result"]["fields"]):
         db_name = ""
         fld_name = fld["name"]
         if entity_name in fields_config:
@@ -90,6 +90,11 @@ def gen_schema(in_json_details):
         field_json = replce_if_dict_elem_exists(field_json, fld, "label")
         field_json = replce_if_dict_elem_exists(field_json, fld, "dblabel")
         field_json = field_json.replace('<db_name>', db_name)
+        if idx + 1 != len(data["result"]["fields"]):
+            field_json = field_json.replace("<trailing_comma>", ",")
+        else:
+            field_json = field_json.replace("<trailing_comma>", "")
+
         all_fields = all_fields + field_json
 
     all_fields = schema_prefix + all_fields + schema_postfix
