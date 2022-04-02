@@ -6,13 +6,28 @@ from requests.auth import HTTPDigestAuth
 
 def replce_if_dict_elem_exists(in_string, in_dict, in_label ):
     ret = in_string
+    # replace with value if there is one else with an empty string
     if in_label in in_dict:
         ret = in_string.replace(f"<{in_label}>", in_dict[in_label])
+    else:
+        ret = in_string.replace(f"<{in_label}>", "")
     return ret
+
+def read_json_secrets_file(in_file_name):
+    in_schema_config = f'..{os.sep}secrets{os.sep}{in_file_name}'
+    schema_config = {}
+    cwd = os.getcwd()
+    schema_config_path = os.path.abspath(os.path.join(cwd, in_schema_config))
+    if os.path.exists(schema_config_path):
+        with open(schema_config_path, "r") as config_file:
+            schema_config = json.load(config_file)
+    return schema_config
+
 
 ##########################################################################
 
 def gen_schema(in_json_details):
+
     schema_config = read_json_secrets_file("schema.json")
 
     fields_config = {}
@@ -33,22 +48,25 @@ def gen_schema(in_json_details):
             {
               "type": "object",
               "properties": {
-    """
+"""
     schema_postfix = """          }
             }
           ]
         }
       }
     }
-    """
-    field_template = """            "<name>": {
+"""
+    field_template = """                "<name>": {
                   "type": "string",
                   "title": "<label>",
                   "description": "<dblabel>",
                   "default": ""<db_name>
-                }
-    """
+                },
+"""
 
+
+    # with open(in_file, "r") as entity_desc:
+    #     data = json.load(entity_desc)
     data = in_json_details
     print(data)
     entity_name = data["result"]["name"]
@@ -71,7 +89,9 @@ def gen_schema(in_json_details):
         field_json = field_json.replace('<db_name>', db_name)
         all_fields = all_fields + field_json
 
+    all_fields = all_fields[:-2] + '\n'
     all_fields = schema_prefix + all_fields + schema_postfix
+    all_fields = all_fields.replace("’", "'")
     # print(schema_postfix)
     # print(all_fields)
     return all_fields
@@ -102,7 +122,7 @@ def get_entity_details(in_entity):
 
 def write_schema(in_content, in_entity):
     print("write_schema :: " + in_entity)
-    out_file_name = in_entity
+    out_file_name = in_entity #.replace("vtcm", "vtcm_") + ".json"
     cwd = os.getcwd()
     path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
 
@@ -122,7 +142,7 @@ def parse_source_script():
         for line in f:
             found = re.findall("^class (.+)\(VtigerStream\)", line)
             if found:
-                schema_file_name = found[0][0] + p.sub(r'_\1', found[0][1:])
+                schema_file_name = found[0][0] + p.sub(r'_\1', found[0][1:]) + '.json'
                 schema_file_name = schema_file_name.lower()
                 # print(schema_file_name)
                 schema_file_names.append(schema_file_name)
@@ -144,6 +164,8 @@ def main():
 
     # sample schema config file
     # {
+    #   "vtiger_types_list": ["Calendar"
+    #                       ],
     #   "fields_config": {
     #     "Calendar": {
     #       "a_field_with_a_really_long_name_and_airbyte_shortens_it_in_db": {
@@ -166,6 +188,7 @@ def main():
             print(f"processing: {entity_name}")
             entity_details = get_entity_details(entity_name)
             schema = gen_schema(entity_details)
+            print(schema)
             write_schema(schema, entity["schema_file_name"])
 
 main()
