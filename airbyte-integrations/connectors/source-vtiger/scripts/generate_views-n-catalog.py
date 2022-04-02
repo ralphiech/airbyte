@@ -5,12 +5,9 @@ from pathlib import Path
 
 
 def generate_views():
-    # path_schemas = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
     cwd = os.getcwd()
     path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
-    # path_schemas = f"{cwd}/../source-vtiger/schemas"
     path_ddl_out = os.path.abspath(os.path.join(cwd, 'output-ddl'))
-    # path_ddl_out = f"{cwd}/./output-ddl"
 
     # create the output directory if it does not exist yet
     Path(path_ddl_out).mkdir(exist_ok=True)
@@ -25,6 +22,9 @@ def generate_views():
         print("path found!!")
         print(path_schemas)
 
+    p_end = re.compile('_+$')
+    p_mid = re.compile('_{2,}')
+
     for file in os.listdir(path_schemas):
         # print(file)
         filename = os.fsdecode(file)
@@ -38,7 +38,7 @@ def generate_views():
             # print(data)
             fields_dict = data["properties"]["result"]["items"][0]["properties"]
             print(fields_dict)
-            view_fields = {}
+            view_fields = []
             field_alias = {}
             for item in fields_dict:
                 # print(fields_dict[item])
@@ -48,6 +48,10 @@ def generate_views():
                 alias = ""
                 # not all fileds have title and description defined in json schema
                 db_name = item
+                field_name = item
+                if len(field_name) > 43:
+                    # airbyte logic to deal with long names
+                    field_name = field_name[0:20] + '__' + field_name[-21:]
                 # if field name in the table differs from the schema name
                 if "db_name" in fields_dict[item]:
                     db_name = fields_dict[item]["db_name"]
@@ -66,8 +70,12 @@ def generate_views():
                 else:
                     desc = item
 
-                mapping = alias.maketrans(" ().?!-","_______")
-                view_fields[db_name] = {"field": item, "desc": desc, "alias": re.sub("_{2,}", "_", alias.translate(mapping) )}
+                replace_chars = " ()',.?!-:"
+                mapping = alias.maketrans(replace_chars, "_" * len(replace_chars))
+                alias = p_mid.sub("_", alias.translate(mapping))
+                alias = p_end.sub("", alias)
+                alias = alias[0:59] # pg limit on column name length
+                view_fields.append({"field": field_name, "desc": desc, "alias": alias })
                 # print(view_fields[item])
                 # print("built in entity")
             print(view_fields)
@@ -76,13 +84,18 @@ def generate_views():
             create_view = "CREATE OR REPLACE VIEW " + view_name + " AS" + "\nSELECT "
             i = 0
             comments = ""
-            for k, v in view_fields.items():
+            for v in view_fields: #.items():
+                field = v['field']
+                alias = v['alias']
+                desc = v["desc"].replace("'", "''")
+
                 if i > 0:
-                    create_view = create_view + "\n     , " + k + " AS " + v["alias"]
+                    create_view = create_view + "\n     , " +field + " AS " + alias
                 else:
-                    create_view = create_view + k + " AS " + v["alias"]
+                    create_view = create_view + field + " AS " + alias
                 i = i+1
-                comments = comments + f'\ncomment on column {view_name}.{v["alias"]} is \'{v["desc"]}\';'
+
+                comments = comments + f'\ncomment on column {view_name}.{alias} is \'{desc}\';'
             source_table_name = "public." + filename.replace(".json", "") + "_result"
             create_view = create_view + f"\n  FROM {source_table_name};\n"
             create_view = create_view + comments
@@ -138,12 +151,9 @@ def generate_views():
         write_file.write(schema_ddl)
 
 def generate_catalog():
-    # path = "C:/Users/ZoranStipanicev/Documents/vtcm_ddl_scripts"
     cwd = os.getcwd()
     path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
-    # path_schemas = f"{cwd}/../source-vtiger/schemas"
     path_catalog_out = os.path.abspath(os.path.join(cwd, f'..{os.sep}sample_files'))
-    # path_catalog_out = f"{cwd}/../sample_files"
     output_file_name = "configured_catalog.json"
     catalog_hdr = """{
       "streams": ["""
