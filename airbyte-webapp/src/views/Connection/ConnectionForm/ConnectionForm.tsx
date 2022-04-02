@@ -16,12 +16,14 @@ import {
   Label,
 } from "components";
 
-import { useDestinationDefinitionSpecificationLoadAsync } from "hooks/services/useDestinationHook";
-import useWorkspace from "hooks/services/useWorkspace";
+import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { createFormErrorMessage } from "utils/errorStatusMessage";
 
-import { Connection, ScheduleProperties } from "core/resources/Connection";
-import { ConnectionNamespaceDefinition } from "core/domain/connection";
+import {
+  Connection,
+  ConnectionNamespaceDefinition,
+  ScheduleProperties,
+} from "core/domain/connection";
 import { NamespaceDefinitionField } from "./components/NamespaceDefinitionField";
 import CreateControls from "./components/CreateControls";
 import SchemaField from "./components/SyncCatalogField";
@@ -35,6 +37,7 @@ import {
   useInitialValues,
 } from "./formConfig";
 import { OperationsSection } from "./components/OperationsSection";
+import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 
 const EditLaterMessage = styled(Label)`
   margin: -20px 0 29px;
@@ -120,7 +123,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   additionalSchemaControl,
   connection,
 }) => {
-  const destDefinition = useDestinationDefinitionSpecificationLoadAsync(
+  const destDefinition = useGetDestinationDefinitionSpecification(
     connection.destination.destinationDefinitionId
   );
 
@@ -135,12 +138,14 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     isEditMode
   );
 
-  const { workspace } = useWorkspace();
-
+  const workspace = useCurrentWorkspace();
   const onFormSubmit = useCallback(
     async (values: FormikConnectionFormValues) => {
       const formValues: ConnectionFormValues = (connectionValidationSchema.cast(
-        values
+        values,
+        {
+          context: { isRequest: true },
+        }
       ) as unknown) as ConnectionFormValues;
 
       formValues.operations = mapFormPropsToOperation(
