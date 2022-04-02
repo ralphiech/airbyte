@@ -13,13 +13,6 @@ def replce_if_dict_elem_exists(in_string, in_dict, in_label ):
 ##########################################################################
 
 def gen_schema(in_json_details):
-    # in_schema_config = f'..{os.sep}secrets{os.sep}schema.json'
-    # schema_config = {}
-    # cwd = os.getcwd()
-    # schema_config_path = os.path.abspath(os.path.join(cwd, in_schema_config))
-    # if os.path.exists(schema_config_path):
-    #     with open(schema_config_path, "r") as config_file:
-    #         schema_config = json.load(config_file)
     schema_config = read_json_secrets_file("schema.json")
 
     fields_config = {}
@@ -56,9 +49,6 @@ def gen_schema(in_json_details):
                 }
     """
 
-
-    # with open(in_file, "r") as entity_desc:
-    #     data = json.load(entity_desc)
     data = in_json_details
     print(data)
     entity_name = data["result"]["name"]
@@ -112,7 +102,7 @@ def get_entity_details(in_entity):
 
 def write_schema(in_content, in_entity):
     print("write_schema :: " + in_entity)
-    out_file_name = in_entity #.replace("vtcm", "vtcm_") + ".json"
+    out_file_name = in_entity
     cwd = os.getcwd()
     path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
 
