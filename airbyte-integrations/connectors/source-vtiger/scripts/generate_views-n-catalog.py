@@ -37,14 +37,15 @@ def generate_views():
             data = json.load(f)
             # print(data)
             fields_dict = data["properties"]["result"]["items"][0]["properties"]
-            print(fields_dict)
+            # print(fields_dict)
             view_fields = []
+            ########################################################################################
+            # field_alias is used to avoid duplicate aliases / view column names
+            # we are taking labels from vtiger for alias and 2 fields can have same label in vTiger
+            # that's OK in vTiger but we can't have to columns with the same name
             field_alias = {}
+
             for item in fields_dict:
-                # print(fields_dict[item])
-                # if filename.startswith("vtcm"):
-                #     print("custom entity")
-                # else:
                 alias = ""
                 # not all fileds have title and description defined in json schema
                 db_name = item
@@ -53,32 +54,47 @@ def generate_views():
                     # airbyte logic to deal with long names
                     field_name = field_name[0:20] + '__' + field_name[-21:]
                 # if field name in the table differs from the schema name
-                if "db_name" in fields_dict[item]:
-                    db_name = fields_dict[item]["db_name"]
+                # if "db_name" in fields_dict[item]:
+                #     db_name = fields_dict[item]["db_name"]
 
                 if "title" in fields_dict[item]:
                     title = fields_dict[item]["title"]
                 else:
                     title = item
-                if title in field_alias:
-                    alias = item
+
+                # we need to clean the title and convert to lower to be sure we will avoid duplicate column names
+                title_lower = title.lower()
+                replace_chars = " ()';,&.?!-:"
+                mapping = alias.maketrans(replace_chars, "_" * len(replace_chars))
+                title_lower = title_lower.translate(mapping)
+                title_lower = p_end.sub("", title_lower)
+
+                # print(title_lower)
+                if title_lower in field_alias:
+                    alias = item # title was already used as an field alias so we keep vTiger field name as view column name (alias)
                 else:
-                    field_alias[title] = item
+                    field_alias[title_lower] = item
                     alias = title
+
                 if "description" in fields_dict[item]:
                     desc = fields_dict[item]["description"]
                 else:
                     desc = item
 
-                replace_chars = " ()',.?!-:"
-                mapping = alias.maketrans(replace_chars, "_" * len(replace_chars))
                 alias = p_mid.sub("_", alias.translate(mapping))
                 alias = p_end.sub("", alias)
                 alias = alias[0:59] # pg limit on column name length
+                # if filed name contains & we need to wrap it into double quotes
+                if "&" in field_name:
+                    field_name = f'"{field_name}"'
                 view_fields.append({"field": field_name, "desc": desc, "alias": alias })
                 # print(view_fields[item])
                 # print("built in entity")
-            print(view_fields)
+            # print(field_alias)
+
+            # print(view_fields)
+            common_path_prefix = f"{path_ddl_out}{os.sep}"
+
             short_view_name = filename.replace("vtcm_", "").replace(".json", "")
             view_name = "reports." + short_view_name
             create_view = "CREATE OR REPLACE VIEW " + view_name + " AS" + "\nSELECT "
@@ -100,15 +116,16 @@ def generate_views():
             create_view = create_view + f"\n  FROM {source_table_name};\n"
             create_view = create_view + comments
             print(create_view)
-            # if you need a file with only the view creation uncomment this
-            # with open(path_schemas + "/dbg_vw_" + short_view_name + ".sql", "w") as write_file:
+
+            # if you need a file with only the view creation uncomment this [for debugging]
+            # with open(common_path_prefix + "dbg_vw_" + short_view_name + ".sql", "w") as write_file:
             #     write_file.write(create_view)
 
             procedure_name = f"public.prc_create_vw_{short_view_name}"
             create_procedure = f"CREATE OR REPLACE PROCEDURE {procedure_name}() AS\n$$\n" + create_view
             create_procedure = create_procedure + "\n$$\nLANGUAGE sql;"
 
-            with open(f"{path_ddl_out}{os.sep}01_prc_create_vw_{short_view_name}.sql", "w") as write_file:
+            with open(f"{common_path_prefix}01_prc_create_vw_{short_view_name}.sql", "w") as write_file:
                 write_file.write(create_procedure)
 
             body_append = f"""      IF r.object_identity = '{source_table_name}'
@@ -134,7 +151,7 @@ def generate_views():
     $$;
     """
 
-    with open(f"{path_ddl_out}{os.sep}02_event_function.sql", "w") as write_file:
+    with open(f"{common_path_prefix}02_event_function.sql", "w") as write_file:
         write_file.write(event_function)
 
     event_trigger_ddl = """DROP EVENT TRIGGER IF EXISTS ev_create_views;
@@ -142,12 +159,12 @@ def generate_views():
     EXECUTE FUNCTION  public.fun_ev_create_views();
     """
 
-    with open(f"{path_ddl_out}{os.sep}03_ev_trg_create_views.sql", "w") as write_file:
+    with open(f"{common_path_prefix}03_ev_trg_create_views.sql", "w") as write_file:
         write_file.write(event_trigger_ddl)
 
     schema_ddl = """CREATE SCHEMA IF NOT EXISTS reports AUTHORIZATION postgres;"""
 
-    with open(f"{path_ddl_out}{os.sep}00_create_schema.sql", "w") as write_file:
+    with open(f"{common_path_prefix}00_create_schema.sql", "w") as write_file:
         write_file.write(schema_ddl)
 
 def generate_catalog():
