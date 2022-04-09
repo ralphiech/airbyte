@@ -224,6 +224,14 @@ class Services(VtigerStream):
     ) -> str:
         return self.get_query_url_string('Services', next_page_token)
 
+class Users(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('Users', next_page_token)
+
 class VtcmAccounts(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
@@ -307,6 +315,7 @@ class SourceVtiger(AbstractSource):
                 Payments(host=host, authenticator=auth),
                 SalesOrder(host=host, authenticator=auth),
                 Services(host=host, authenticator=auth),
+                Users(host=host, authenticator=auth),
                 VtcmAccounts(host=host, authenticator=auth),
                 VtcmChildren(host=host, authenticator=auth),
                 VtcmEducation(host=host, authenticator=auth),
