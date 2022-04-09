@@ -109,6 +109,7 @@ def generate_views():
                 alias = v['alias']
                 desc = v["desc"].replace("'", "''")
 
+                print(f"field: {field} > type: {v['type']}")
                 if v['type'] != 'varchar':
                     field = "NULLIF(" + field + ", '')::" + v['type']
 

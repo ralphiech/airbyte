@@ -77,7 +77,7 @@ def gen_schema(in_json_details):
             if "name" in fld["type"]:
                 fld_type = fld["type"]["name"]
                 if fld_type == "date":
-                    db_type == "date"
+                    db_type = "date"
                 elif fld_type == "datetime":
                     db_type = "timestamp"
                 elif fld_type == "boolean":
@@ -86,6 +86,7 @@ def gen_schema(in_json_details):
                     db_type = "integer"
                 elif fld_type == "decimal":
                     db_type = "decimal"
+
         fld_name = fld["name"]
 
         # print(fld_name)
@@ -185,7 +186,8 @@ def main():
             entity_name = entity["query_name"]
             print(f"processing: {entity_name}")
             entity_details = get_entity_details(entity_name)
-            print(entity_details)
+            # print(entity_details)
+            # print(entity_details["result"]["fields"][9]["type"]["name"])
             schema = gen_schema(entity_details)
             print(schema)
             write_schema(schema, entity["schema_file_name"])
