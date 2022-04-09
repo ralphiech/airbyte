@@ -30,10 +30,7 @@ def gen_schema(in_json_details):
 
     schema_config = read_json_secrets_file("schema.json")
 
-    fields_config = {}
-    if 'fields_config' in schema_config:
-        print('fields_config defined')
-        fields_config = schema_config['fields_config']
+
 
     schema_prefix = """{
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -60,7 +57,8 @@ def gen_schema(in_json_details):
                   "type": "string",
                   "title": "<label>",
                   "description": "<dblabel>",
-                  "default": ""<db_name>
+                  "db_type": "<db_type>",
+                  "default": ""
                 },
 """
 
@@ -74,19 +72,29 @@ def gen_schema(in_json_details):
     print("========================================")
     all_fields = ""
     for fld in data["result"]["fields"]:
-        db_name = ""
+        db_type = "varchar"
+        if "type" in fld:
+            if "name" in fld["type"]:
+                fld_type = fld["type"]["name"]
+                if fld_type == "date":
+                    db_type == "date"
+                elif fld_type == "datetime":
+                    db_type = "timestamp"
+                elif fld_type == "boolean":
+                    db_type = "boolean"
+                elif fld_type == "integer":
+                    db_type = "integer"
+                elif fld_type == "decimal":
+                    db_type = "decimal"
         fld_name = fld["name"]
-        if entity_name in fields_config:
-            if fld_name in fields_config[entity_name]:
-                if "db_name" in fields_config[entity_name][fld_name]:
-                    db_name = f',\n                  "db_name": "{fields_config[entity_name][fld_name]["db_name"]}"'
 
         # print(fld_name)
         field_json = field_template
         field_json = replce_if_dict_elem_exists(field_json, fld, "name")
         field_json = replce_if_dict_elem_exists(field_json, fld, "label")
         field_json = replce_if_dict_elem_exists(field_json, fld, "dblabel")
-        field_json = field_json.replace('<db_name>', db_name)
+        field_json = field_json.replace("<db_type>", db_type)
+
         all_fields = all_fields + field_json
 
     all_fields = all_fields[:-2] + '\n'
@@ -163,17 +171,7 @@ def main():
     # restapi/v1/vtiger/default/listtypes?fieldTypeList=nullParameters
 
     # sample schema config file
-    # {
-    #   "vtiger_types_list": ["Calendar"
-    #                       ],
-    #   "fields_config": {
-    #     "Calendar": {
-    #       "a_field_with_a_really_long_name_and_airbyte_shortens_it_in_db": {
-    #         "db_name": "a_field_with_a_rea_airbyte_shortens_it_in_db"
-    #       }
-    #     }
-    #   }
-    # }
+
 
     print("=== Main ===")
     # schema_config = read_json_secrets_file("schema.json")
@@ -187,6 +185,7 @@ def main():
             entity_name = entity["query_name"]
             print(f"processing: {entity_name}")
             entity_details = get_entity_details(entity_name)
+            print(entity_details)
             schema = gen_schema(entity_details)
             print(schema)
             write_schema(schema, entity["schema_file_name"])

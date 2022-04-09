@@ -62,6 +62,10 @@ def generate_views():
                 else:
                     title = item
 
+                type = 'varchar'
+                if "db_type" in fields_dict[item]:
+                    type = fields_dict[item]["db_type"]
+
                 # we need to clean the title and convert to lower to be sure we will avoid duplicate column names
                 title_lower = title.lower()
                 replace_chars = " ()';,&.?!-:"
@@ -87,7 +91,7 @@ def generate_views():
                 # if filed name contains & we need to wrap it into double quotes
                 if "&" in field_name:
                     field_name = f'"{field_name}"'
-                view_fields.append({"field": field_name, "desc": desc, "alias": alias })
+                view_fields.append({"field": field_name, "desc": desc, "alias": alias, "type": type})
                 # print(view_fields[item])
                 # print("built in entity")
             # print(field_alias)
@@ -104,6 +108,10 @@ def generate_views():
                 field = v['field']
                 alias = v['alias']
                 desc = v["desc"].replace("'", "''")
+
+                if v['type'] != 'varchar':
+                    field = "NULLIF(" + field + ", '')::" + v['type']
+
 
                 if i > 0:
                     create_view = create_view + "\n     , " +field + " AS " + alias
