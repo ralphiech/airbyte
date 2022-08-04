@@ -16,4 +16,4 @@ secrets/*
 # Generated files secrets
 source_vtiger/schemas/*
 sample_files/*
-source-vtiger/scripts/output-ddl/*
+source-vtiger/scripts/output-ddl
