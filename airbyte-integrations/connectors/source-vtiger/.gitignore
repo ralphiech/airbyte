@@ -14,5 +14,6 @@ __pycache__/
 secrets/*
 
 # Generated files secrets
-schemas/*
+source_vtiger/schemas/*
 sample_files/*
+source-vtiger/scripts/output-ddl/*
