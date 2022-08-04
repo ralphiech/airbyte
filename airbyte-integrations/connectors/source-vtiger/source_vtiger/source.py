@@ -272,6 +272,14 @@ class VtcmForms(VtigerStream):
     ) -> str:
         return self.get_query_url_string('vtcmforms', next_page_token)
 
+class VtcmHealth(VtigerStream):
+    def path(
+        self, stream_state: Mapping[str, Any] = None,
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return self.get_query_url_string('vtcmhealth', next_page_token)
+
 class VtcmPrograms(VtigerStream):
     def path(
         self, stream_state: Mapping[str, Any] = None,
@@ -321,5 +329,6 @@ class SourceVtiger(AbstractSource):
                 VtcmEducation(host=host, authenticator=auth),
                 VtcmFamilies(host=host, authenticator=auth),
                 VtcmForms(host=host, authenticator=auth),
+                VtcmHealth(host=host, authenticator=auth),
                 VtcmPrograms(host=host, authenticator=auth)
             ]
