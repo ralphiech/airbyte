@@ -12,3 +12,7 @@ __pycache__/
 
 # Connector secrets
 secrets/*
+
+# Generated files secrets
+schemas/*
+sample_files/*
