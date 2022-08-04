@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import traceback
 import requests
 from requests.auth import HTTPDigestAuth
 
@@ -8,6 +9,9 @@ def replce_if_dict_elem_exists(in_string, in_dict, in_label ):
     ret = in_string
     # replace with value if there is one else with an empty string
     if in_label in in_dict:
+        # avoid multi line strings
+        in_dict[in_label] = in_dict[in_label].replace("\n", " ")
+
         ret = in_string.replace(f"<{in_label}>", in_dict[in_label])
     else:
         ret = in_string.replace(f"<{in_label}>", "")
@@ -29,8 +33,6 @@ def read_json_secrets_file(in_file_name):
 def gen_schema(in_json_details):
 
     schema_config = read_json_secrets_file("schema.json")
-
-
 
     schema_prefix = """{
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -118,8 +120,8 @@ def get_entity_details(in_entity):
 
     url = f"https://{host}/restapi/v1/vtiger/default/describe?elementType={entity_name}"
 
-
     response = requests.get(url, auth=(username, password))
+    response.raise_for_status()
 
     # print("response.status_code")
     # print(response.status_code)
@@ -192,7 +194,13 @@ def main():
             print(schema)
             write_schema(schema, entity["schema_file_name"])
 
-main()
+try:
+    main()
+except requests.HTTPError as e:
+    print(e)
+except Exception as e:
+    print(traceback.format_exc())
+
 
 ####
 # TODO
