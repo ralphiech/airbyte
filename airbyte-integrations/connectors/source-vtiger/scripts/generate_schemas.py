@@ -18,7 +18,7 @@ def replce_if_dict_elem_exists(in_string, in_dict, in_label ):
     return ret
 
 def read_json_secrets_file(in_file_name):
-    in_schema_config = f'..{os.sep}secrets{os.sep}{in_file_name}'
+    in_schema_config = f'secrets{os.sep}{in_file_name}'
     schema_config = {}
     cwd = os.getcwd()
     schema_config_path = os.path.abspath(os.path.join(cwd, in_schema_config))
@@ -135,7 +135,7 @@ def write_schema(in_content, in_entity):
     print("write_schema :: " + in_entity)
     out_file_name = in_entity #.replace("vtcm", "vtcm_") + ".json"
     cwd = os.getcwd()
-    path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
+    path_schemas = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}schemas'))
 
     file_path = os.path.join(path_schemas, out_file_name)
     with open(file_path, "w") as write_file:
@@ -144,7 +144,7 @@ def write_schema(in_content, in_entity):
 ##########################################################################
 
 def parse_source_script():
-    in_source = f'..{os.sep}source_vtiger{os.sep}source.py'
+    in_source = f'source_vtiger{os.sep}source.py'
 
     schema_file_names = []
     query_names = []

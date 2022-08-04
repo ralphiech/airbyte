@@ -6,7 +6,7 @@ from pathlib import Path
 
 def generate_views():
     cwd = os.getcwd()
-    path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
+    path_schemas = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}schemas'))
     path_ddl_out = os.path.abspath(os.path.join(cwd, 'output-ddl'))
 
     # create the output directory if it does not exist yet
@@ -178,8 +178,8 @@ def generate_views():
 
 def generate_catalog():
     cwd = os.getcwd()
-    path_schemas = os.path.abspath(os.path.join(cwd, f'..{os.sep}source_vtiger{os.sep}schemas'))
-    path_catalog_out = os.path.abspath(os.path.join(cwd, f'..{os.sep}sample_files'))
+    path_schemas = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}schemas'))
+    path_catalog_out = os.path.abspath(os.path.join(cwd, f'sample_files'))
     output_file_name = "configured_catalog.json"
     catalog_hdr = """{
       "streams": ["""
@@ -242,10 +242,10 @@ generate_catalog()
 # print(os.getcwd())
 
 # cwd = os.getcwd()
-# path_schemas = os.path.join(cwd, f'..{os.sep}source-vtiger{os.sep}schemas')
+# path_schemas = os.path.join(cwd, f'source-vtiger{os.sep}schemas')
 # print(path_schemas)
 # print(os.path.abspath(path_schemas))
 
-# # path_schemas = f"{cwd}/../source-vtiger/schemas"
+# # path_schemas = f"source-vtiger/schemas"
 # path_ddl_out = os.path.join(cwd, 'output-ddl')
 # print(path_ddl_out)
