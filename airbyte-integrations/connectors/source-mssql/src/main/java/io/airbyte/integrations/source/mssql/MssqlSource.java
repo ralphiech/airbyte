@@ -12,6 +12,7 @@ import static java.util.stream.Collectors.toList;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.microsoft.sqlserver.jdbc.SQLServerResultSetMetaData;
 import io.airbyte.commons.functional.CheckedConsumer;
 import io.airbyte.commons.json.Jsons;
@@ -61,6 +62,7 @@ public class MssqlSource extends AbstractJdbcSource<JDBCType> implements Source 
   public static final String MSSQL_DB_HISTORY = "mssql_db_history";
   public static final String CDC_LSN = "_ab_cdc_lsn";
   private static final String HIERARCHYID = "hierarchyid";
+  private static final int INTERMEDIATE_STATE_EMISSION_FREQUENCY = 10_000;
 
   public static Source sshWrappedSource() {
     return new SshWrappedSource(new MssqlSource(), JdbcUtils.HOST_LIST_KEY, JdbcUtils.PORT_LIST_KEY);
@@ -222,6 +224,7 @@ public class MssqlSource extends AbstractJdbcSource<JDBCType> implements Source 
 
     if (MssqlCdcHelper.isCdc(config)) {
       final List<AirbyteStream> streams = catalog.getStreams().stream()
+          .map(MssqlSource::overrideSyncModes)
           .map(MssqlSource::removeIncrementalWithoutPk)
           .map(MssqlSource::setIncrementalToSourceDefined)
           .map(MssqlSource::addCdcMetadataColumns)
@@ -284,7 +287,8 @@ public class MssqlSource extends AbstractJdbcSource<JDBCType> implements Source 
 
       // Azure SQL does not support USE clause
       final String sql =
-          isAzureSQL ? "SELECT * FROM cdc.change_tables" : "USE " + config.get(JdbcUtils.DATABASE_KEY).asText() + "; SELECT * FROM cdc.change_tables";
+          isAzureSQL ? "SELECT * FROM cdc.change_tables"
+              : "USE [" + config.get(JdbcUtils.DATABASE_KEY).asText() + "]; SELECT * FROM cdc.change_tables";
       final PreparedStatement ps = connection.prepareStatement(sql);
       LOGGER.info(String.format(
           "Checking user '%s' can query the cdc schema and that we have at least 1 cdc enabled table using the query: '%s'",
@@ -377,6 +381,15 @@ public class MssqlSource extends AbstractJdbcSource<JDBCType> implements Source 
       LOGGER.info("using CDC: {}", false);
       return super.getIncrementalIterators(database, catalog, tableNameToTable, stateManager, emittedAt);
     }
+  }
+
+  @Override
+  protected int getStateEmissionFrequency() {
+    return INTERMEDIATE_STATE_EMISSION_FREQUENCY;
+  }
+
+  private static AirbyteStream overrideSyncModes(final AirbyteStream stream) {
+    return stream.withSupportedSyncModes(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
   }
 
   // Note: in place mutation.

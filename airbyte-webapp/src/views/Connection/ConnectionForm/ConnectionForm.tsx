@@ -1,14 +1,18 @@
-import { Field, FieldProps, Form, Formik, FormikHelpers, useFormikContext } from "formik";
-import React, { useCallback, useState } from "react";
+import { Field, FieldProps, Form, Formik, FormikHelpers } from "formik";
+import React, { useCallback, useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useToggle } from "react-use";
-import { useDebounce } from "react-use";
 import styled from "styled-components";
 
 import { Card, ControlLabels, DropDown, DropDownRow, H5, Input } from "components";
 import { FormChangeTracker } from "components/FormChangeTracker";
 
-import { ConnectionSchedule, NamespaceDefinitionType, WebBackendConnectionRead } from "core/request/AirbyteClient";
+import {
+  ConnectionScheduleDataBasicSchedule,
+  ConnectionScheduleType,
+  NamespaceDefinitionType,
+  WebBackendConnectionRead,
+} from "core/request/AirbyteClient";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
@@ -102,19 +106,17 @@ export interface ConnectionFormSubmitResult {
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 
-// eslint-disable-next-line react/function-component-definition
-function FormValuesChangeTracker<T>({ onChangeValues }: { onChangeValues?: (values: T) => void }) {
-  // Grab values from context
-  const { values } = useFormikContext<T>();
-  useDebounce(
-    () => {
-      onChangeValues?.(values);
-    },
-    200,
-    [values, onChangeValues]
-  );
-  return null;
+interface DirtyChangeTrackerProps {
+  dirty: boolean;
+  onChanges: (dirty: boolean) => void;
 }
+
+const DirtyChangeTracker: React.FC<DirtyChangeTrackerProps> = ({ dirty, onChanges }) => {
+  useEffect(() => {
+    onChanges(dirty);
+  }, [dirty, onChanges]);
+  return null;
+};
 
 interface ConnectionFormProps {
   onSubmit: (values: ConnectionFormValues) => Promise<ConnectionFormSubmitResult | void>;
@@ -123,7 +125,7 @@ interface ConnectionFormProps {
   successMessage?: React.ReactNode;
   onDropDownSelect?: (item: DropDownRow.IDataItem) => void;
   onCancel?: () => void;
-  onChangeValues?: (values: FormikConnectionFormValues) => void;
+  onFormDirtyChanges?: (dirty: boolean) => void;
 
   /** Should be passed when connection is updated with withRefreshCatalog flag */
   canSubmitUntouchedForm?: boolean;
@@ -146,7 +148,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   canSubmitUntouchedForm,
   additionalSchemaControl,
   connection,
-  onChangeValues,
+  onFormDirtyChanges,
 }) => {
   const destDefinition = useGetDestinationDefinitionSpecification(connection.destination.destinationDefinitionId);
   const { clearFormChange } = useFormChangeTrackerService();
@@ -162,6 +164,11 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
   const onFormSubmit = useCallback(
     async (values: FormikConnectionFormValues, formikHelpers: FormikHelpers<FormikConnectionFormValues>) => {
+      // Set the scheduleType based on the schedule value
+      values["scheduleType"] = values.scheduleData?.basicSchedule
+        ? ConnectionScheduleType.basic
+        : ConnectionScheduleType.manual;
+
       const formValues: ConnectionFormValues = connectionValidationSchema.cast(values, {
         context: { isRequest: true },
       }) as unknown as ConnectionFormValues;
@@ -188,7 +195,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   );
 
   const errorMessage = submitError ? createFormErrorMessage(submitError) : null;
-  const frequencies = useFrequencyDropdownData();
+  const frequencies = useFrequencyDropdownData(connection.scheduleData);
 
   return (
     <Formik
@@ -200,7 +207,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       {({ isSubmitting, setFieldValue, isValid, dirty, resetForm, values }) => (
         <FormContainer className={className}>
           <FormChangeTracker changed={dirty} formId={formId} />
-          <FormValuesChangeTracker onChangeValues={onChangeValues} />
+          {onFormDirtyChanges && <DirtyChangeTracker dirty={dirty} onChanges={onFormDirtyChanges} />}
           {!isEditMode && (
             <Section>
               <Field name="name">
@@ -237,8 +244,8 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             </Section>
           )}
           <Section title={<FormattedMessage id="connection.transfer" />}>
-            <Field name="schedule">
-              {({ field, meta }: FieldProps<ConnectionSchedule>) => (
+            <Field name="scheduleData.basicSchedule">
+              {({ field, meta }: FieldProps<ConnectionScheduleDataBasicSchedule>) => (
                 <FlexRow>
                   <LeftFieldCol>
                     <ConnectorLabel
@@ -335,6 +342,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
                 destinationSupportedSyncModes={destDefinition.supportedDestinationSyncModes}
                 additionalControl={additionalSchemaControl}
                 component={SchemaField}
+                isSubmitting={isSubmitting}
                 mode={mode}
               />
             </StyledSection>
