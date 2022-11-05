@@ -8,6 +8,7 @@ from datetime import timedelta
 from functools import partial
 from unittest import mock
 
+import pendulum
 import pytest
 import responses
 from airbyte_cdk.models import SyncMode
@@ -16,10 +17,14 @@ from pendulum import Date
 from pytest import raises
 from requests.exceptions import ConnectionError
 from source_amazon_ads.schemas.profile import AccountInfo, Profile
+from source_amazon_ads.source import CONFIG_DATE_FORMAT
 from source_amazon_ads.streams import (
+    SponsoredBrandsCampaigns,
     SponsoredBrandsReportStream,
     SponsoredBrandsVideoReportStream,
+    SponsoredDisplayCampaigns,
     SponsoredDisplayReportStream,
+    SponsoredProductCampaigns,
     SponsoredProductsReportStream,
 )
 from source_amazon_ads.streams.report_streams.report_streams import ReportGenerationFailure, ReportGenerationInProgress, TooManyRequests
@@ -239,7 +244,7 @@ def test_display_report_stream_init_too_many_requests(mocker, config):
         ),
         (
             [
-                (lambda x: x > 5, None, "2021-01-02 03:34:05"),
+                (lambda x: x > 5, None, "2021-01-02 04:04:05"),
             ],
             ReportGenerationInProgress,
         ),
@@ -254,11 +259,11 @@ def test_display_report_stream_init_too_many_requests(mocker, config):
         (
             [
                 (lambda x: True, "FAILURE", None),
-                (lambda x: x >= 10, None, "2021-01-02 03:34:05"),
-                (lambda x: x >= 15, None, "2021-01-02 04:04:05"),
-                (lambda x: x >= 20, None, "2021-01-02 04:34:05"),
-                (lambda x: x >= 25, None, "2021-01-02 05:04:05"),
-                (lambda x: x >= 30, None, "2021-01-02 05:34:05"),
+                (lambda x: x >= 10, None, "2021-01-02 04:04:05"),
+                (lambda x: x >= 15, None, "2021-01-02 05:04:05"),
+                (lambda x: x >= 20, None, "2021-01-02 06:04:05"),
+                (lambda x: x >= 25, None, "2021-01-02 07:04:05"),
+                (lambda x: x >= 30, None, "2021-01-02 08:04:05"),
             ],
             ReportGenerationFailure,
         ),
@@ -339,10 +344,10 @@ def test_display_report_stream_slices_incremental(config):
 def test_get_start_date(config):
     profiles = make_profiles()
 
-    config["start_date"] = "2021-07-10"
+    config["start_date"] = pendulum.from_format("2021-07-10", CONFIG_DATE_FORMAT).date()
     stream = SponsoredProductsReportStream(config, profiles, authenticator=mock.MagicMock())
     assert stream.get_start_date(profiles[0], {}) == Date(2021, 7, 10)
-    config["start_date"] = "2021-05-10"
+    config["start_date"] = pendulum.from_format("2021-05-10", CONFIG_DATE_FORMAT).date()
     stream = SponsoredProductsReportStream(config, profiles, authenticator=mock.MagicMock())
     assert stream.get_start_date(profiles[0], {}) == Date(2021, 6, 1)
 
@@ -368,7 +373,7 @@ def test_stream_slices_different_timezones(config):
 
 def test_stream_slices_lazy_evaluation(config):
     with freeze_time("2022-06-01T23:50:00+00:00") as frozen_datetime:
-        config["start_date"] = "2021-05-10"
+        config["start_date"] = pendulum.from_format("2021-05-10", CONFIG_DATE_FORMAT).date()
         profile1 = Profile(profileId=1, timezone="UTC", accountInfo=AccountInfo(marketplaceStringId="", id="", type="seller"))
         profile2 = Profile(profileId=2, timezone="UTC", accountInfo=AccountInfo(marketplaceStringId="", id="", type="seller"))
 
@@ -491,7 +496,7 @@ def test_read_incremental_without_records_start_date(config):
     )
 
     profiles = make_profiles()
-    config["start_date"] = "2020-12-25"
+    config["start_date"] = pendulum.from_format("2020-12-25", CONFIG_DATE_FORMAT).date()
     stream = SponsoredDisplayReportStream(config, profiles, authenticator=mock.MagicMock())
 
     with freeze_time("2021-01-02 12:00:00") as frozen_datetime:
@@ -514,7 +519,7 @@ def test_read_incremental_with_records_start_date(config):
     )
 
     profiles = make_profiles()
-    config["start_date"] = "2020-12-25"
+    config["start_date"] = pendulum.from_format("2020-12-25", CONFIG_DATE_FORMAT).date()
     stream = SponsoredDisplayReportStream(config, profiles, authenticator=mock.MagicMock())
 
     with freeze_time("2021-01-02 12:00:00") as frozen_datetime:
@@ -554,3 +559,56 @@ def test_read_incremental_with_records_start_date(config):
         records = list(read_incremental(stream, state))
         assert state == {"1": {"reportDate": "20210104"}}
         assert {r["reportDate"] for r in records} == {"20210103", "20210104", "20210105", "20210106"}
+
+
+@pytest.mark.parametrize(
+    "state_filter, stream_class",
+    [
+        (
+            ["enabled", "archived", "paused"],
+            SponsoredBrandsCampaigns,
+        ),
+        (
+            ["enabled"],
+            SponsoredBrandsCampaigns,
+        ),
+        (
+            None,
+            SponsoredBrandsCampaigns,
+        ),
+        (
+            ["enabled", "archived", "paused"],
+            SponsoredProductCampaigns,
+        ),
+        (
+            ["enabled"],
+            SponsoredProductCampaigns,
+        ),
+        (
+            None,
+            SponsoredProductCampaigns,
+        ),
+        (
+            ["enabled", "archived", "paused"],
+            SponsoredDisplayCampaigns,
+        ),
+        (
+            ["enabled"],
+            SponsoredDisplayCampaigns,
+        ),
+        (
+            None,
+            SponsoredDisplayCampaigns,
+        ),
+    ],
+)
+def test_streams_state_filter(mocker, config, state_filter, stream_class):
+    profiles = make_profiles()
+    mocker.patch.object(stream_class, "state_filter", new_callable=mocker.PropertyMock, return_value=state_filter)
+
+    stream = stream_class(config, profiles)
+    params = stream.request_params(stream_state=None, stream_slice=None, next_page_token=None)
+    if "stateFilter" in params:
+        assert params["stateFilter"] == ",".join(state_filter)
+    else:
+        assert state_filter is None

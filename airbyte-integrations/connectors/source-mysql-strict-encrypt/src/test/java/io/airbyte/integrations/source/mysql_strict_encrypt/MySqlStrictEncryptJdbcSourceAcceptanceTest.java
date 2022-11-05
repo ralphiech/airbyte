@@ -6,12 +6,13 @@ package io.airbyte.integrations.source.mysql_strict_encrypt;
 
 import static io.airbyte.integrations.source.mysql.MySqlSource.SSL_PARAMETERS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.string.Strings;
@@ -68,6 +69,7 @@ class MySqlStrictEncryptJdbcSourceAcceptanceTest extends JdbcSourceAcceptanceTes
         .withEnv("MYSQL_ROOT_HOST", "%")
         .withEnv("MYSQL_ROOT_PASSWORD", TEST_PASSWORD);
     container.start();
+    setEnv(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, "true");
     final Connection connection = DriverManager.getConnection(container.getJdbcUrl(), "root", container.getPassword());
     connection.createStatement().execute("GRANT ALL PRIVILEGES ON *.* TO '" + TEST_USER + "'@'%';\n");
   }
@@ -228,7 +230,8 @@ class MySqlStrictEncryptJdbcSourceAcceptanceTest extends JdbcSourceAcceptanceTes
         .withStreamName(streamName)
         .withStreamNamespace(namespace)
         .withCursorField(List.of(COL_ID))
-        .withCursor("5");
+        .withCursor("5")
+        .withCursorRecordCount(1L);
     expectedMessages.addAll(createExpectedTestMessages(List.of(state)));
     return expectedMessages;
   }
@@ -251,7 +254,7 @@ class MySqlStrictEncryptJdbcSourceAcceptanceTest extends JdbcSourceAcceptanceTes
 
     final AirbyteConnectionStatus actual = source.check(config);
     assertEquals(Status.FAILED, actual.getStatus());
-    assertEquals("Unsecured connection not allowed", actual.getMessage());
+    assertTrue(actual.getMessage().contains("Unsecured connection not allowed"));
   }
 
   @Test
@@ -276,7 +279,7 @@ class MySqlStrictEncryptJdbcSourceAcceptanceTest extends JdbcSourceAcceptanceTes
 
     final AirbyteConnectionStatus actual = source.check(config);
     assertEquals(Status.FAILED, actual.getStatus());
-    assertNotEquals("Unsecured connection not allowed", actual.getMessage());
+    assertFalse(actual.getMessage().contains("Unsecured connection not allowed"));
   }
 
   @Test
@@ -299,7 +302,9 @@ class MySqlStrictEncryptJdbcSourceAcceptanceTest extends JdbcSourceAcceptanceTes
         .putIfAbsent(JdbcUtils.SSL_MODE_KEY, Jsons.jsonNode(sslMode));
     ((ObjectNode) config).putIfAbsent("tunnel_method", Jsons.jsonNode(tunnelMode));
 
-    final Exception exception = assertThrows(NullPointerException.class, () -> source.check(config));
+    final AirbyteConnectionStatus actual = source.check(config);
+    assertEquals(Status.FAILED, actual.getStatus());
+    assertTrue(actual.getMessage().contains("Could not connect with provided SSH configuration."));
   }
 
   @Test
@@ -318,6 +323,14 @@ class MySqlStrictEncryptJdbcSourceAcceptanceTest extends JdbcSourceAcceptanceTes
         .putIfAbsent(JdbcUtils.SSL_MODE_KEY, Jsons.jsonNode(sslMode));
     ((ObjectNode) config).putIfAbsent("tunnel_method", Jsons.jsonNode(tunnelMode));
 
-    final Exception exception = assertThrows(NullPointerException.class, () -> source.check(config));
+    final AirbyteConnectionStatus actual = source.check(config);
+    assertEquals(Status.FAILED, actual.getStatus());
+    assertTrue(actual.getMessage().contains("Could not connect with provided SSH configuration."));
   }
+
+  @Override
+  protected boolean supportsPerStream() {
+    return true;
+  }
+
 }

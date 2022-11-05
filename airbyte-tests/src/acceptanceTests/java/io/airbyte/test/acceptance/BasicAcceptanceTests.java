@@ -4,7 +4,6 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.api.client.model.generated.ConnectionSchedule.TimeUnitEnum.MINUTES;
 import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.AWESOME_PEOPLE_TABLE_NAME;
 import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_NAME;
@@ -39,7 +38,11 @@ import io.airbyte.api.client.model.generated.AttemptStatus;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.ConnectionSchedule;
+import io.airbyte.api.client.model.generated.ConnectionScheduleData;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
+import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.DataType;
@@ -57,7 +60,11 @@ import io.airbyte.api.client.model.generated.JobListRequestBody;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.JobWithAttemptsRead;
+import io.airbyte.api.client.model.generated.OperationCreate;
 import io.airbyte.api.client.model.generated.OperationRead;
+import io.airbyte.api.client.model.generated.OperatorConfiguration;
+import io.airbyte.api.client.model.generated.OperatorType;
+import io.airbyte.api.client.model.generated.OperatorWebhook;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
@@ -68,19 +75,20 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
-import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
+import io.airbyte.api.client.model.generated.WebhookConfigWrite;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.client.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.db.Database;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
 import io.airbyte.test.utils.PostgreSQLContainerHelper;
 import io.airbyte.test.utils.SchemaTableNamePair;
-import io.airbyte.workers.temporal.scheduling.state.WorkflowState;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -149,6 +157,11 @@ class BasicAcceptanceTests {
   private static final String LOCATION = "location";
   private static final String FIELD = "field";
   private static final String ID_AND_NAME = "id_and_name";
+
+  private static final int MAX_SCHEDULED_JOB_RETRIES = 10;
+
+  private static final ConnectionScheduleData BASIC_SCHEDULE_DATA = new ConnectionScheduleData().basicSchedule(
+      new ConnectionScheduleDataBasicSchedule().units(1L).timeUnit(TimeUnitEnum.HOURS));
 
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
@@ -336,19 +349,19 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final String name = "test-connection-" + UUID.randomUUID();
-    final ConnectionSchedule schedule = new ConnectionSchedule().timeUnit(MINUTES).units(100L);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final ConnectionRead createdConnection =
-        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, schedule);
+        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.BASIC, BASIC_SCHEDULE_DATA);
 
     assertEquals(sourceId, createdConnection.getSourceId());
     assertEquals(destinationId, createdConnection.getDestinationId());
     assertEquals(1, createdConnection.getOperationIds().size());
     assertEquals(operationId, createdConnection.getOperationIds().get(0));
     assertEquals(catalog, createdConnection.getSyncCatalog());
-    assertEquals(schedule, createdConnection.getSchedule());
+    assertEquals(ConnectionScheduleType.BASIC, createdConnection.getScheduleType());
+    assertEquals(BASIC_SCHEDULE_DATA, createdConnection.getScheduleData());
     assertEquals(name, createdConnection.getName());
   }
 
@@ -375,7 +388,8 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     // wait to get out of PENDING
@@ -394,32 +408,92 @@ class BasicAcceptanceTests {
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
 
-    final ConnectionSchedule connectionSchedule = new ConnectionSchedule().units(1L).timeUnit(MINUTES);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
 
-    final var connection =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, connectionSchedule);
+    final UUID connectionId =
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.BASIC,
+            BASIC_SCHEDULE_DATA).getConnectionId();
 
-    // When a new connection is created, Airbyte might sync it immediately (before the sync interval).
-    // Then it will wait the sync interval.
-    // if the wait isn't long enough, failures say "Connection refused" because the assert kills the
-    // syncs in progress
-    List<io.airbyte.api.client.model.generated.JobWithAttemptsRead> jobs = new ArrayList<>();
-    while (jobs.size() < 2) {
-      final var listSyncJobsRequest = new io.airbyte.api.client.model.generated.JobListRequestBody().configTypes(List.of(JobConfigType.SYNC))
-          .configId(connection.getConnectionId().toString());
-      final var resp = apiClient.getJobsApi().listJobsFor(listSyncJobsRequest);
-      jobs = resp.getJobs();
-      sleep(Duration.ofSeconds(30).toMillis());
-    }
+    waitForSuccessfulJobWithRetries(connectionId, MAX_SCHEDULED_JOB_RETRIES);
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
   }
 
   @Test
   @Order(9)
+  void testCronSync() throws Exception {
+    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
+    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
+    final UUID operationId = testHarness.createOperation().getOperationId();
+    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+
+    // NOTE: this cron should run once every two minutes.
+    final ConnectionScheduleData connectionScheduleData = new ConnectionScheduleData().cron(
+        new ConnectionScheduleDataCron().cronExpression("* */2 * * * ?").cronTimeZone("UTC"));
+    final SyncMode syncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+
+    final UUID connectionId =
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.CRON,
+            connectionScheduleData).getConnectionId();
+
+    waitForSuccessfulJobWithRetries(connectionId, MAX_SCHEDULED_JOB_RETRIES);
+
+    testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+
+    // remove connection to avoid exception during tear down
+    testHarness.removeConnection(connectionId);
+  }
+
+  @Test
+  @Order(19)
+  void testWebhookOperationExecutesSuccessfully() throws Exception {
+    // create workspace webhook config
+    final WorkspaceRead workspaceRead = apiClient.getWorkspaceApi().updateWorkspace(
+        new WorkspaceUpdate().workspaceId(workspaceId).addWebhookConfigsItem(
+            new WebhookConfigWrite().name("reqres test")));
+    // create a webhook operation
+    final OperationRead operationRead = apiClient.getOperationApi().createOperation(new OperationCreate()
+        .workspaceId(workspaceId)
+        .name("reqres test")
+        .operatorConfiguration(new OperatorConfiguration()
+            .operatorType(OperatorType.WEBHOOK)
+            .webhook(new OperatorWebhook()
+                .webhookConfigId(workspaceRead.getWebhookConfigs().get(0).getId())
+                // NOTE: reqres.in is free service that hosts a REST API intended for testing frontend/client code.
+                // We use it here as an endpoint that will accept an HTTP POST.
+                .executionUrl("https://reqres.in/api/users")
+                .executionBody("{\"name\": \"morpheus\", \"job\": \"leader\"}"))));
+    // create a connection with the new operation.
+    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
+    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
+    // NOTE: this is a normalization operation.
+    final UUID operationId = testHarness.createOperation().getOperationId();
+    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    final SyncMode syncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    final UUID connectionId =
+        testHarness.createConnection(
+            TEST_CONNECTION, sourceId, destinationId, List.of(operationId, operationRead.getOperationId()), catalog, ConnectionScheduleType.MANUAL,
+            null)
+            .getConnectionId();
+    // run the sync
+    apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    waitForSuccessfulJobWithRetries(connectionId, MAX_SCHEDULED_JOB_RETRIES);
+    testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    // remove connection to avoid exception during tear down
+    testHarness.removeConnection(connectionId);
+    // TODO(mfsiega-airbyte): add webhook info to the jobs api to verify the webhook execution status.
+  }
+
+  @Test
+  @Order(10)
   void testMultipleSchemasAndTablesSync() throws Exception {
     // create tables in another schema
     PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource("postgres_second_schema_multiple_tables.sql"), sourcePsql);
@@ -433,14 +507,15 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(false);
   }
 
   @Test
-  @Order(10)
+  @Order(11)
   void testMultipleSchemasSameTablesSync() throws Exception {
     // create tables in another schema
     PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource("postgres_separate_schema_same_table.sql"), sourcePsql);
@@ -454,7 +529,8 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
@@ -462,7 +538,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(11)
+  @Order(12)
   void testIncrementalDedupeSync() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
@@ -476,7 +552,8 @@ class BasicAcceptanceTests {
         .destinationSyncMode(destinationSyncMode)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     // sync from start
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
@@ -505,7 +582,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(12)
+  @Order(13)
   void testIncrementalSync() throws Exception {
     LOGGER.info("Starting testIncrementalSync()");
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
@@ -527,13 +604,14 @@ class BasicAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     LOGGER.info("Beginning testIncrementalSync() sync 1");
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
 
@@ -553,7 +631,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(expectedRecords, new SchemaTableNamePair(PUBLIC, STREAM_NAME));
 
@@ -564,7 +642,7 @@ class BasicAcceptanceTests {
     waitWhileJobHasStatus(apiClient.getJobsApi(), jobInfoRead.getJob(),
         Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED));
 
-    LOGGER.info("state after reset: {}", apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(Collections.emptyList(), new SchemaTableNamePair(PUBLIC,
         STREAM_NAME));
@@ -574,14 +652,15 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead3 =
         apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
-    LOGGER.info("state after sync 3: {}", apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
 
   }
 
+  @Disabled
   @Test
-  @Order(13)
+  @Order(14)
   void testDeleteConnection() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
@@ -596,7 +675,8 @@ class BasicAcceptanceTests {
         .primaryKey(List.of(List.of(COLUMN_NAME))));
 
     UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.RUNNING));
@@ -623,7 +703,8 @@ class BasicAcceptanceTests {
     // test deletion of connection when temporal workflow is in a bad state
     LOGGER.info("Testing connection deletion when temporal is in a terminal state");
     connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     testHarness.terminateTemporalWorkflow(connectionId);
 
@@ -638,7 +719,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(14)
+  @Order(15)
   void testUpdateConnectionWhenWorkflowUnreachable() throws Exception {
     // This test only covers the specific behavior of updating a connection that does not have an
     // underlying temporal workflow.
@@ -659,13 +740,16 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Testing connection update when temporal is in a terminal state");
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     testHarness.terminateTemporalWorkflow(connectionId);
 
     // we should still be able to update the connection when the temporal workflow is in this state
-    testHarness.updateConnectionSchedule(connectionId,
-        new ConnectionSchedule().timeUnit(ConnectionSchedule.TimeUnitEnum.HOURS).units(1L));
+    testHarness.updateConnectionSchedule(
+        connectionId,
+        ConnectionScheduleType.BASIC,
+        new ConnectionScheduleData().basicSchedule(new ConnectionScheduleDataBasicSchedule().timeUnit(TimeUnitEnum.HOURS).units(1L)));
 
     LOGGER.info("Waiting for workflow to be recreated...");
     Thread.sleep(500);
@@ -675,7 +759,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(15)
+  @Order(16)
   void testManualSyncRepairsWorkflowWhenWorkflowUnreachable() throws Exception {
     // This test only covers the specific behavior of updating a connection that does not have an
     // underlying temporal workflow.
@@ -701,7 +785,8 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Testing manual sync when temporal is in a terminal state");
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     LOGGER.info("Starting first manual sync");
     final JobInfoRead firstJobInfo = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
@@ -724,7 +809,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(16)
+  @Order(17)
   void testResetConnectionRepairsWorkflowWhenWorkflowUnreachable() throws Exception {
     // This test only covers the specific behavior of updating a connection that does not have an
     // underlying temporal workflow.
@@ -740,7 +825,8 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Testing reset connection when temporal is in a terminal state");
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
 
     testHarness.terminateTemporalWorkflow(connectionId);
 
@@ -749,7 +835,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(17)
+  @Order(18)
   void testResetCancelsRunningSync() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition();
 
@@ -771,7 +857,8 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     // wait to get out of PENDING
@@ -813,13 +900,14 @@ class BasicAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     LOGGER.info("Beginning {} sync 1", testInfo.getDisplayName());
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
 
@@ -843,7 +931,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(expectedRecords, new SchemaTableNamePair(PUBLIC, STREAM_NAME));
 
@@ -853,19 +941,19 @@ class BasicAcceptanceTests {
     waitWhileJobHasStatus(apiClient.getJobsApi(), jobInfoRead.getJob(),
         Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED));
 
-    LOGGER.info("state after reset: {}", apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(Collections.emptyList(), new SchemaTableNamePair(PUBLIC,
         STREAM_NAME));
 
     // sync one more time. verify it is the equivalent of a full refresh.
     final String expectedState =
-        "{\"cursor\":\"6\",\"stream_name\":\"id_and_name\",\"cursor_field\":[\"id\"],\"stream_namespace\":\"public\"}";
+        "{\"cursor\":\"6\",\"stream_name\":\"id_and_name\",\"cursor_field\":[\"id\"],\"stream_namespace\":\"public\",\"cursor_record_count\":1}";
     LOGGER.info("Starting {} sync 3", testInfo.getDisplayName());
     final JobInfoRead connectionSyncRead3 =
         apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
-    final ConnectionState state = apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
+    final ConnectionState state = apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
     LOGGER.info("state after sync 3: {}", state);
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
@@ -901,13 +989,14 @@ class BasicAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     LOGGER.info("Beginning {} sync 1", testInfo.getDisplayName());
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
 
@@ -920,7 +1009,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead2 =
         apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     final JobInfoRead syncJob = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead2.getJob().getId()));
     final Optional<AttemptInfoRead> result = syncJob.getAttempts().stream()
@@ -957,10 +1046,6 @@ class BasicAcceptanceTests {
     final SourceRead source = testHarness.createPostgresSource(true);
     final UUID sourceId = source.getSourceId();
     final UUID sourceDefinitionId = source.getSourceDefinitionId();
-    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final UUID destinationId = testHarness.createPostgresDestination(true).getDestinationId();
-    final OperationRead operation = testHarness.createOperation();
-    final String name = "test_reset_when_schema_is_modified_" + UUID.randomUUID();
 
     // Fetch the current/most recent source definition version
     final SourceDefinitionRead sourceDefinitionRead =
@@ -973,10 +1058,16 @@ class BasicAcceptanceTests {
           AirbyteAcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
       testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AirbyteAcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
 
+      final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+      final UUID destinationId = testHarness.createPostgresDestination(true).getDestinationId();
+      final OperationRead operation = testHarness.createOperation();
+      final String name = "test_reset_when_schema_is_modified_" + UUID.randomUUID();
+
       LOGGER.info("Discovered catalog: {}", catalog);
 
       final ConnectionRead connection =
-          testHarness.createConnection(name, sourceId, destinationId, List.of(operation.getOperationId()), catalog, null);
+          testHarness.createConnection(name, sourceId, destinationId, List.of(operation.getOperationId()), catalog, ConnectionScheduleType.MANUAL,
+              null);
       LOGGER.info("Created Connection: {}", connection);
 
       sourceDb.query(ctx -> {
@@ -996,7 +1087,7 @@ class BasicAcceptanceTests {
         return null;
       });
       final ConnectionState initSyncState =
-          apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
+          apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
       LOGGER.info("ConnectionState after the initial sync: " + initSyncState.toString());
 
       testHarness.assertSourceAndDestinationDbInSync(false);
@@ -1027,22 +1118,8 @@ class BasicAcceptanceTests {
       // Update with refreshed catalog
       LOGGER.info("Submit the update request");
       final WebBackendConnectionUpdate update = new WebBackendConnectionUpdate()
-          .name(connection.getName())
           .connectionId(connection.getConnectionId())
-          .namespaceDefinition(connection.getNamespaceDefinition())
-          .namespaceFormat(connection.getNamespaceFormat())
-          .prefix(connection.getPrefix())
-          .operations(List.of(
-              new WebBackendOperationCreateOrUpdate()
-                  .name(operation.getName())
-                  .operationId(operation.getOperationId())
-                  .workspaceId(operation.getWorkspaceId())
-                  .operatorConfiguration(operation.getOperatorConfiguration())))
-          .syncCatalog(updatedCatalog)
-          .schedule(connection.getSchedule())
-          .sourceCatalogId(connection.getSourceCatalogId())
-          .status(connection.getStatus())
-          .resourceRequirements(connection.getResourceRequirements());
+          .syncCatalog(updatedCatalog);
       webBackendApi.webBackendUpdateConnection(update);
 
       LOGGER.info("Inspecting Destination DB after the update request, tables should be empty");
@@ -1051,7 +1128,7 @@ class BasicAcceptanceTests {
         return null;
       });
       final ConnectionState postResetState =
-          apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
+          apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
       LOGGER.info("ConnectionState after the update request: {}", postResetState.toString());
 
       // Wait until the sync from the UpdateConnection is finished
@@ -1060,7 +1137,7 @@ class BasicAcceptanceTests {
       waitForSuccessfulJob(apiClient.getJobsApi(), syncFromTheUpdate);
 
       final ConnectionState postUpdateState =
-          apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
+          apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
       LOGGER.info("ConnectionState after the final sync: {}", postUpdateState.toString());
 
       LOGGER.info("Inspecting DBs After the final sync");
@@ -1076,8 +1153,8 @@ class BasicAcceptanceTests {
       testHarness.assertSourceAndDestinationDbInSync(false);
     } finally {
       // Set source back to version it was set to at beginning of test
-      testHarness.updateSourceDefinitionVersion(sourceDefinitionId, currentSourceDefinitionVersion);
       LOGGER.info("Set source connector back to per-stream state supported version {}.", currentSourceDefinitionVersion);
+      testHarness.updateSourceDefinitionVersion(sourceDefinitionId, currentSourceDefinitionVersion);
     }
   }
 
@@ -1092,6 +1169,7 @@ class BasicAcceptanceTests {
   }
 
   @Test
+  @Disabled
   void testIncrementalSyncMultipleStreams() throws Exception {
     LOGGER.info("Starting testIncrementalSyncMultipleStreams()");
 
@@ -1118,13 +1196,14 @@ class BasicAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     LOGGER.info("Beginning testIncrementalSync() sync 1");
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
 
@@ -1154,7 +1233,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(expectedRecordsIdAndName, new SchemaTableNamePair(PUBLIC_SCHEMA_NAME, STREAM_NAME));
     testHarness.assertRawDestinationContains(expectedRecordsCoolEmployees, new SchemaTableNamePair(STAGING_SCHEMA_NAME, COOL_EMPLOYEES_TABLE_NAME));
@@ -1167,7 +1246,7 @@ class BasicAcceptanceTests {
     waitWhileJobHasStatus(apiClient.getJobsApi(), jobInfoRead.getJob(),
         Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED));
 
-    LOGGER.info("state after reset: {}", apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(Collections.emptyList(), new SchemaTableNamePair(PUBLIC,
         STREAM_NAME));
@@ -1177,7 +1256,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead3 =
         apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
-    LOGGER.info("state after sync 3: {}", apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
 
@@ -1197,7 +1276,8 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, null).getConnectionId();
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+            .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(false);
@@ -1231,7 +1311,7 @@ class BasicAcceptanceTests {
     testHarness.setIncrementalAppendSyncMode(catalog, List.of(COLUMN_ID));
 
     final ConnectionRead connection =
-        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, null);
+        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null);
 
     // Run initial sync
     final JobInfoRead syncRead =
@@ -1328,7 +1408,7 @@ class BasicAcceptanceTests {
   }
 
   private void assertStreamStateContainsStream(final UUID connectionId, final List<StreamDescriptor> expectedStreamDescriptors) throws ApiException {
-    final ConnectionState state = apiClient.getConnectionApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
+    final ConnectionState state = apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
     final List<StreamDescriptor> streamDescriptors = state.getStreamState().stream().map(StreamState::getStreamDescriptor).toList();
 
     Assertions.assertTrue(streamDescriptors.containsAll(expectedStreamDescriptors) && expectedStreamDescriptors.containsAll(streamDescriptors));
@@ -1353,6 +1433,31 @@ class BasicAcceptanceTests {
       mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
     }
     return mostRecentSyncJob;
+  }
+
+  /**
+   * Waits for the given connection to finish, waiting at 30s intervals, until maxRetries is reached.
+   *
+   * @param connectionId the connection to wait for
+   * @param maxRetries the number of times to retry
+   * @throws InterruptedException
+   */
+  private void waitForSuccessfulJobWithRetries(final UUID connectionId, final int maxRetries) throws InterruptedException {
+    int i;
+    for (i = 0; i < maxRetries; i++) {
+      try {
+        final JobRead jobInfo = testHarness.getMostRecentSyncJobId(connectionId);
+        waitForSuccessfulJob(apiClient.getJobsApi(), jobInfo);
+        break;
+      } catch (final Exception e) {
+        LOGGER.info("Something went wrong querying jobs API, retrying...");
+      }
+      sleep(Duration.ofSeconds(30).toMillis());
+    }
+
+    if (i == maxRetries) {
+      LOGGER.error("Sync job did not complete within 5 minutes");
+    }
   }
 
   // This test is disabled because it takes a couple of minutes to run, as it is testing timeouts.
@@ -1390,7 +1495,7 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
 
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, Collections.emptyList(), catalog, null)
+        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()

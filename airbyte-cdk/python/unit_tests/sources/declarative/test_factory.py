@@ -27,14 +27,15 @@ from airbyte_cdk.sources.declarative.requesters.error_handlers.composite_error_h
 from airbyte_cdk.sources.declarative.requesters.error_handlers.default_error_handler import DefaultErrorHandler
 from airbyte_cdk.sources.declarative.requesters.error_handlers.http_response_filter import HttpResponseFilter
 from airbyte_cdk.sources.declarative.requesters.http_requester import HttpRequester
-from airbyte_cdk.sources.declarative.requesters.paginators.limit_paginator import LimitPaginator
+from airbyte_cdk.sources.declarative.requesters.paginators.default_paginator import DefaultPaginator
 from airbyte_cdk.sources.declarative.requesters.request_option import RequestOption, RequestOptionType
 from airbyte_cdk.sources.declarative.requesters.request_options.interpolated_request_options_provider import (
     InterpolatedRequestOptionsProvider,
 )
 from airbyte_cdk.sources.declarative.requesters.requester import HttpMethod
 from airbyte_cdk.sources.declarative.retrievers.simple_retriever import SimpleRetriever
-from airbyte_cdk.sources.declarative.schema.json_schema import JsonSchema
+from airbyte_cdk.sources.declarative.schema import DefaultSchemaLoader
+from airbyte_cdk.sources.declarative.schema.json_file_schema_loader import JsonFileSchemaLoader
 from airbyte_cdk.sources.declarative.stream_slicers.datetime_stream_slicer import DatetimeStreamSlicer
 from airbyte_cdk.sources.declarative.stream_slicers.list_stream_slicer import ListStreamSlicer
 from airbyte_cdk.sources.declarative.transformations import AddFields, RemoveFields
@@ -69,9 +70,9 @@ def test_factory():
     request_options_provider = factory.create_component(config["request_options"], input_config)()
 
     assert type(request_options_provider) == InterpolatedRequestOptionsProvider
-    assert request_options_provider._parameter_interpolator._config == input_config
+    assert request_options_provider._parameter_interpolator.config == input_config
     assert request_options_provider._parameter_interpolator._interpolator.mapping["offset"] == "{{ next_page_token['offset'] }}"
-    assert request_options_provider._body_json_interpolator._config == input_config
+    assert request_options_provider._body_json_interpolator.config == input_config
     assert request_options_provider._body_json_interpolator._interpolator.mapping["body_offset"] == "{{ next_page_token['offset'] }}"
 
 
@@ -280,9 +281,8 @@ selector:
     class_name: airbyte_cdk.sources.declarative.extractors.record_filter.RecordFilter
     condition: "{{ record['id'] > stream_state['id'] }}"
 metadata_paginator:
-    type: "LimitPaginator"
-    page_size: 10
-    limit_option:
+    type: "DefaultPaginator"
+    page_size_option:
       inject_into: request_parameter
       field_name: page_size
     page_token_option:
@@ -290,6 +290,7 @@ metadata_paginator:
     pagination_strategy:
       type: "CursorPagination"
       cursor_value: "{{ response._metadata.next }}"
+      page_size: 10
     url_base: "https://api.sendgrid.com/v3/"
 next_page_url_from_token_partial:
   class_name: "airbyte_cdk.sources.declarative.interpolation.interpolated_string.InterpolatedString"
@@ -318,7 +319,7 @@ retriever:
 partial_stream:
   class_name: "airbyte_cdk.sources.declarative.declarative_stream.DeclarativeStream"
   schema_loader:
-    class_name: airbyte_cdk.sources.declarative.schema.json_schema.JsonSchema
+    class_name: airbyte_cdk.sources.declarative.schema.json_file_schema_loader.JsonFileSchemaLoader
     file_path: "./source_sendgrid/schemas/{{ options.name }}.json"
   cursor_field: [ ]
 list_stream:
@@ -328,7 +329,7 @@ list_stream:
     primary_key: "id"
     extractor:
       $ref: "*ref(extractor)"
-      field_pointer: ["result"]
+      field_pointer: ["{{ options['name'] }}"]
   retriever:
     $ref: "*ref(retriever)"
     requester:
@@ -358,14 +359,14 @@ check:
     assert type(stream) == DeclarativeStream
     assert stream.primary_key == "id"
     assert stream.name == "lists"
-    assert type(stream.schema_loader) == JsonSchema
+    assert type(stream.schema_loader) == JsonFileSchemaLoader
     assert type(stream.retriever) == SimpleRetriever
     assert stream.retriever.requester.http_method == HttpMethod.GET
     assert stream.retriever.requester.authenticator._token.eval(input_config) == "verysecrettoken"
     assert type(stream.retriever.record_selector) == RecordSelector
     assert type(stream.retriever.record_selector.extractor.decoder) == JsonDecoder
 
-    assert [fp.eval(input_config) for fp in stream.retriever.record_selector.extractor.field_pointer] == ["result"]
+    assert [fp.eval(input_config) for fp in stream.retriever.record_selector.extractor.field_pointer] == ["lists"]
     assert type(stream.retriever.record_selector.record_filter) == RecordFilter
     assert stream.retriever.record_selector.record_filter._filter_interpolator.condition == "{{ record['id'] > stream_state['id'] }}"
     assert stream.schema_loader._get_json_filepath() == "./source_sendgrid/schemas/lists.json"
@@ -378,18 +379,24 @@ check:
     assert stream.retriever.requester.path.default == "marketing/lists"
 
 
-def test_create_record_selector():
-    content = """
+@pytest.mark.parametrize(
+    "test_name, record_selector, expected_runtime_selector",
+    [("test_static_record_selector", "result", "result"), ("test_options_record_selector", "{{ options['name'] }}", "lists")],
+)
+def test_create_record_selector(test_name, record_selector, expected_runtime_selector):
+    content = f"""
     extractor:
       type: DpathExtractor
     selector:
+      $options:
+        name: "lists"
       class_name: airbyte_cdk.sources.declarative.extractors.record_selector.RecordSelector
       record_filter:
         class_name: airbyte_cdk.sources.declarative.extractors.record_filter.RecordFilter
         condition: "{{ record['id'] > stream_state['id'] }}"
       extractor:
         $ref: "*ref(extractor)"
-        field_pointer: ["result"]
+        field_pointer: ["{record_selector}"]
     """
     config = parser.parse(content)
 
@@ -398,12 +405,99 @@ def test_create_record_selector():
     selector = factory.create_component(config["selector"], input_config)()
     assert isinstance(selector, RecordSelector)
     assert isinstance(selector.extractor, DpathExtractor)
-    assert [fp.eval(input_config) for fp in selector.extractor.field_pointer] == ["result"]
+    assert [fp.eval(input_config) for fp in selector.extractor.field_pointer] == [expected_runtime_selector]
     assert isinstance(selector.record_filter, RecordFilter)
 
 
-def test_create_requester():
-    content = """
+@pytest.mark.parametrize(
+    "test_name, content, expected_field_pointer_value",
+    [
+        (
+            "test_option_in_selector",
+            """
+                      extractor:
+                        type: DpathExtractor
+                        field_pointer: ["{{ options['name'] }}"]
+                      selector:
+                        class_name: airbyte_cdk.sources.declarative.extractors.record_selector.RecordSelector
+                        $options:
+                          name: "selector"
+                        extractor: "*ref(extractor)"
+                    """,
+            "selector",
+        ),
+        (
+            "test_option_in_extractor",
+            """
+                      extractor:
+                        type: DpathExtractor
+                        $options:
+                          name: "extractor"
+                        field_pointer: ["{{ options['name'] }}"]
+                      selector:
+                        class_name: airbyte_cdk.sources.declarative.extractors.record_selector.RecordSelector
+                        $options:
+                          name: "selector"
+                        extractor: "*ref(extractor)"
+                    """,
+            "extractor",
+        ),
+    ],
+)
+def test_options_propagation(test_name, content, expected_field_pointer_value):
+    config = parser.parse(content)
+
+    selector = factory.create_component(config["selector"], input_config, True)()
+    assert selector.extractor.field_pointer[0].eval(input_config) == expected_field_pointer_value
+
+
+@pytest.mark.parametrize(
+    "test_name, error_handler",
+    [
+        (
+            "test_create_requester_constant_error_handler",
+            """
+  error_handler:
+    backoff_strategies:
+      - type: "ConstantBackoffStrategy"
+        backoff_time_in_seconds: 5
+            """,
+        ),
+        (
+            "test_create_requester_exponential_error_handler",
+            """
+  error_handler:
+    backoff_strategies:
+      - type: "ExponentialBackoffStrategy"
+        factor: 5
+            """,
+        ),
+        (
+            "test_create_requester_wait_time_from_header_error_handler",
+            """
+  error_handler:
+    backoff_strategies:
+      - type: "WaitTimeFromHeader"
+        header: "a_header"
+            """,
+        ),
+        (
+            "test_create_requester_wait_time_until_from_header_error_handler",
+            """
+  error_handler:
+    backoff_strategies:
+      - type: "WaitUntilTimeFromHeader"
+        header: "a_header"
+            """,
+        ),
+        (
+            "test_create_requester_no_error_handler",
+            """""",
+        ),
+    ],
+)
+def test_create_requester(test_name, error_handler):
+    content = f"""
   requester:
     type: HttpRequester
     path: "/v3/marketing/lists"
@@ -412,13 +506,14 @@ def test_create_requester():
     url_base: "https://api.sendgrid.com"
     authenticator:
       type: "BasicHttpAuthenticator"
-      username: "{{ options.name }}"
-      password: "{{ config.apikey }}"
+      username: "{{{{ options.name}}}}"
+      password: "{{{{ config.apikey }}}}"
     request_options_provider:
       request_parameters:
         a_parameter: "something_here"
       request_headers:
         header: header_value
+    {error_handler}
     """
     config = parser.parse(content)
 
@@ -476,9 +571,8 @@ def test_config_with_defaults():
           file_path: "./source_sendgrid/schemas/{{ options.name }}.yaml"
         retriever:
           paginator:
-            type: "LimitPaginator"
-            page_size: 10
-            limit_option:
+            type: "DefaultPaginator"
+            page_size_option:
               inject_into: request_parameter
               field_name: page_size
             page_token_option:
@@ -486,6 +580,7 @@ def test_config_with_defaults():
             pagination_strategy:
               type: "CursorPagination"
               cursor_value: "{{ response._metadata.next }}"
+              page_size: 10
           requester:
             path: "/v3/marketing/lists"
             authenticator:
@@ -508,32 +603,32 @@ def test_config_with_defaults():
     assert type(stream) == DeclarativeStream
     assert stream.primary_key == "id"
     assert stream.name == "lists"
-    assert type(stream.schema_loader) == JsonSchema
+    assert type(stream.schema_loader) == DefaultSchemaLoader
     assert type(stream.retriever) == SimpleRetriever
     assert stream.retriever.requester.http_method == HttpMethod.GET
 
     assert stream.retriever.requester.authenticator._token.eval(input_config) == "verysecrettoken"
     assert [fp.eval(input_config) for fp in stream.retriever.record_selector.extractor.field_pointer] == ["result"]
-    assert stream.schema_loader._get_json_filepath() == "./source_sendgrid/schemas/lists.yaml"
-    assert isinstance(stream.retriever.paginator, LimitPaginator)
+    assert stream.schema_loader.get_json_schema() == {}
+    assert isinstance(stream.retriever.paginator, DefaultPaginator)
 
     assert stream.retriever.paginator.url_base.string == "https://api.sendgrid.com"
-    assert stream.retriever.paginator.page_size == 10
+    assert stream.retriever.paginator.pagination_strategy.get_page_size() == 10
 
 
-def test_create_limit_paginator():
+def test_create_default_paginator():
     content = """
       paginator:
-        type: "LimitPaginator"
-        page_size: 10
+        type: "DefaultPaginator"
         url_base: "https://airbyte.io"
-        limit_option:
+        page_size_option:
           inject_into: request_parameter
           field_name: page_size
         page_token_option:
           inject_into: path
         pagination_strategy:
           type: "CursorPagination"
+          page_size: 50
           cursor_value: "{{ response._metadata.next }}"
     """
     config = parser.parse(content)
@@ -542,7 +637,7 @@ def test_create_limit_paginator():
 
     paginator_config = config["paginator"]
     paginator = factory.create_component(paginator_config, input_config)()
-    assert isinstance(paginator, LimitPaginator)
+    assert isinstance(paginator, DefaultPaginator)
     page_token_option = paginator.page_token_option
     assert isinstance(page_token_option, RequestOption)
     assert page_token_option.inject_into == RequestOptionType.path
@@ -679,10 +774,10 @@ def test_validation_type_missing_required_fields():
 def test_validation_wrong_interface_type():
     content = """
     paginator:
-      type: "LimitPaginator"
+      type: "DefaultPaginator"
       page_size: 10
       url_base: "https://airbyte.io"
-      limit_option:
+      page_size_option:
         inject_into: request_parameter
         field_name: page_size
       page_token_option:
@@ -717,10 +812,10 @@ def test_validation_create_composite_error_handler():
 def test_validation_wrong_object_type():
     content = """
       paginator:
-        type: "LimitPaginator"
+        type: "DefaultPaginator"
         page_size: 10
         url_base: "https://airbyte.io"
-        limit_option:
+        page_size_option:
           inject_into: request_parameter
           field_name: page_size
         page_token_option:

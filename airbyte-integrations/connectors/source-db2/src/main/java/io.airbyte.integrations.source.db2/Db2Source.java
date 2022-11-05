@@ -5,6 +5,7 @@
 package io.airbyte.integrations.source.db2;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.functional.CheckedFunction;
 import io.airbyte.commons.json.Jsons;
@@ -79,6 +80,10 @@ public class Db2Source extends AbstractJdbcSource<JDBCType> implements Source {
           .build());
     }
 
+    if (config.get(JdbcUtils.JDBC_URL_PARAMS_KEY) != null && !config.get(JdbcUtils.JDBC_URL_PARAMS_KEY).asText().isEmpty()) {
+      ((ObjectNode) result).put(JdbcUtils.JDBC_URL_PARAMS_KEY, config.get(JdbcUtils.JDBC_URL_PARAMS_KEY).asText());
+    }
+
     return result;
   }
 
@@ -104,6 +109,11 @@ public class Db2Source extends AbstractJdbcSource<JDBCType> implements Source {
   @Override
   protected int getStateEmissionFrequency() {
     return INTERMEDIATE_STATE_EMISSION_FREQUENCY;
+  }
+
+  @Override
+  protected String getCountColumnName() {
+    return "RECORD_COUNT";
   }
 
   private CheckedFunction<Connection, PreparedStatement, SQLException> getPrivileges() {

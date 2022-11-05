@@ -127,11 +127,12 @@ QUERY_INCOMPATIBLE_SALESFORCE_OBJECTS = [
     "UserRecordAccess",
 ]
 
+# The following objects are not supported by the Bulk API. Listed objects are version specific.
 UNSUPPORTED_BULK_API_SALESFORCE_OBJECTS = [
     "AcceptedEventRelation",
     "AssetTokenEvent",
-    "AttachedContentNote",
     "Attachment",
+    "AttachedContentNote",
     "CaseStatus",
     "ContractStatus",
     "DeclinedEventRelation",
@@ -147,6 +148,7 @@ UNSUPPORTED_BULK_API_SALESFORCE_OBJECTS = [
     "QuoteTemplateRichTextData",
     "RecentlyViewed",
     "ServiceAppointmentStatus",
+    "ShiftStatus",
     "SolutionStatus",
     "TaskPriority",
     "TaskStatus",
