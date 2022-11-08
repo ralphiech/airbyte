@@ -72,7 +72,7 @@ def generate_views():
 
                 # we need to clean the title and convert to lower to be sure we will avoid duplicate column names
                 title_lower = title.lower()
-                replace_chars = " ()';,&.?!-:"
+                replace_chars = " ()';,&.?!-:‘"
                 mapping = alias.maketrans(replace_chars, "_" * len(replace_chars))
                 title_lower = title_lower.translate(mapping)
                 title_lower = p_end.sub("", title_lower)
