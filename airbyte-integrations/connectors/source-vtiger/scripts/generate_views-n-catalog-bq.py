@@ -104,6 +104,11 @@ def generate_views():
             common_path_prefix = f"{path_ddl_out}{os.sep}"
 
             short_view_name = filename.replace("vtcm_", "").replace(".json", "")
+
+            # rename model/table (it is persons now, used to be children, way back)
+            if short_view_name =='children':
+                short_view_name = 'persons';
+
             view_name = "reports." + short_view_name
             # dbt will generate view name based on the file name
             create_view = "{{ config(materialized='view') }}\n\nSELECT " #"CREATE OR REPLACE VIEW " + view_name + " AS" + "\nSELECT "
@@ -123,9 +128,11 @@ def generate_views():
                 desc = v["desc"].replace("'", "''")
 
                 print(f"field: {field} > type: {v['type']}")
-                if v['type'] != 'varchar':
+                
+                if v['type'] == 'boolean':
+                    field = "CAST(CASE " + field + " WHEN '1' THEN true WHEN '0' THEN false ELSE NULL END AS " + v['type'] + ")"
+                elif v['type'] != 'varchar':
                     field = "CAST(NULLIF(" + field + ", '') AS " + v['type'] + ")"
-
 
                 if i > 0:
                     create_view = create_view + "\n     , " +field + " AS " + alias
