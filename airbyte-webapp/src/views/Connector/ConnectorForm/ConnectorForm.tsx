@@ -56,7 +56,11 @@ const PatchInitialValuesWithWidgetConfig: React.FC<{
       .reduce((acc, [key, value]) => setIn(acc, key, value.default), patchedConstValues);
 
     if (patchedDefaultValues?.connectionConfiguration) {
-      setFieldValue("connectionConfiguration", patchedDefaultValues.connectionConfiguration);
+      setTimeout(() => {
+        // We need to push this out one execution slot, so the form isn't still in its
+        // initialization status and won't react to this call but would just take the initialValues instead.
+        setFieldValue("connectionConfiguration", patchedDefaultValues.connectionConfiguration);
+      });
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,16 +87,15 @@ const RevalidateOnValidationSchemaChange: React.FC<{ validationSchema: unknown }
 export interface ConnectorFormProps {
   formType: "source" | "destination";
   formId?: string;
-  selectedConnectorDefinition?: ConnectorDefinition;
-  selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecification;
-  onSubmit: (values: ConnectorFormValues) => Promise<void> | void;
-  isLoading?: boolean;
+  selectedConnectorDefinition: ConnectorDefinition;
+  selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
+  onSubmit: (values: ConnectorFormValues) => Promise<void>;
   isEditMode?: boolean;
   formValues?: Partial<ConnectorFormValues>;
   hasSuccess?: boolean;
-  fetchingConnectorError?: Error | null;
   errorMessage?: React.ReactNode;
   successMessage?: React.ReactNode;
+  connectorId?: string;
 
   isTestConnectionInProgress?: boolean;
   onStopTesting?: () => void;
@@ -107,7 +110,6 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     formType,
     formValues,
     onSubmit,
-    isLoading,
     isEditMode,
     isTestConnectionInProgress,
     onStopTesting,
@@ -115,6 +117,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     selectedConnectorDefinition,
     selectedConnectorDefinitionSpecification,
     errorMessage,
+    connectorId,
   } = props;
 
   const specifications = useBuildInitialSchema(selectedConnectorDefinitionSpecification);
@@ -126,13 +129,13 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
         ...(selectedConnectorDefinitionSpecification ? { name: { type: "string" } } : {}),
         ...Object.fromEntries(
           Object.entries({
-            connectionConfiguration: isLoading ? null : specifications,
+            connectionConfiguration: specifications,
           }).filter(([, v]) => !!v)
         ),
       },
       required: ["name"],
     }),
-    [isLoading, selectedConnectorDefinitionSpecification, specifications]
+    [selectedConnectorDefinitionSpecification, specifications]
   );
 
   const { formFields, initialValues } = useBuildForm(jsonSchema, formValues);
@@ -193,8 +196,8 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
           selectedConnectorDefinition={selectedConnectorDefinition}
           selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
           isEditMode={isEditMode}
-          isLoadingSchema={isLoading}
           validationSchema={validationSchema}
+          connectorId={connectorId}
         >
           <RevalidateOnValidationSchemaChange validationSchema={validationSchema} />
           <FormikPatch />
@@ -202,7 +205,6 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
           <PatchInitialValuesWithWidgetConfig schema={jsonSchema} initialValues={initialValues} />
           <FormRoot
             {...props}
-            selectedConnector={selectedConnectorDefinitionSpecification}
             formFields={formFields}
             errorMessage={errorMessage}
             isTestConnectionInProgress={isTestConnectionInProgress}

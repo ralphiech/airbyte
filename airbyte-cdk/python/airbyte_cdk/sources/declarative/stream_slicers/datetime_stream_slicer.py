@@ -5,7 +5,6 @@
 import datetime
 import re
 from dataclasses import InitVar, dataclass, field
-from dateutil.relativedelta import relativedelta
 from typing import Any, Iterable, Mapping, Optional, Union
 
 from airbyte_cdk.models import SyncMode
@@ -17,6 +16,7 @@ from airbyte_cdk.sources.declarative.requesters.request_option import RequestOpt
 from airbyte_cdk.sources.declarative.stream_slicers.stream_slicer import StreamSlicer
 from airbyte_cdk.sources.declarative.types import Config, Record, StreamSlice, StreamState
 from dataclasses_jsonschema import JsonSchemaMixin
+from dateutil.relativedelta import relativedelta
 
 
 @dataclass
@@ -71,7 +71,9 @@ class DatetimeStreamSlicer(StreamSlicer, JsonSchemaMixin):
     stream_state_field_end: Optional[str] = None
     lookback_window: Optional[Union[InterpolatedString, str]] = None
 
-    timedelta_regex = re.compile(r"((?P<years>[\.\d]+?)y)?" r"((?P<months>[\.\d]+?)m)?" r"((?P<weeks>[\.\d]+?)w)?" r"((?P<days>[\.\d]+?)d)?$")
+    timedelta_regex = re.compile(
+        r"((?P<years>[\.\d]+?)y)?" r"((?P<months>[\.\d]+?)m)?" r"((?P<weeks>[\.\d]+?)w)?" r"((?P<days>[\.\d]+?)d)?$"
+    )
 
     def __post_init__(self, options: Mapping[str, Any]):
         if not isinstance(self.start_datetime, MinMaxDatetime):
@@ -143,27 +145,17 @@ class DatetimeStreamSlicer(StreamSlicer, JsonSchemaMixin):
         kwargs = {"stream_state": stream_state}
         end_datetime = min(self.end_datetime.get_datetime(self.config, **kwargs), datetime.datetime.now(tz=self._timezone))
         lookback_delta = self._parse_timedelta(self.lookback_window.eval(self.config, **kwargs) if self.lookback_window else "0d")
-        start_datetime = self.start_datetime.get_datetime(self.config, **kwargs) - lookback_delta
-        start_datetime = min(start_datetime, end_datetime)
+
+        earliest_possible_start_datetime = min(self.start_datetime.get_datetime(self.config, **kwargs), end_datetime)
+        cursor_datetime = self._calculate_cursor_datetime_from_state(stream_state)
+        start_datetime = max(earliest_possible_start_datetime, cursor_datetime) - lookback_delta
+
+        return self._partition_daterange(start_datetime, end_datetime, self._step)
+
+    def _calculate_cursor_datetime_from_state(self, stream_state: Mapping[str, Any]) -> datetime.datetime:
         if self.cursor_field.eval(self.config, stream_state=stream_state) in stream_state:
-            cursor_datetime = self.parse_date(stream_state[self.cursor_field.eval(self.config)])
-        else:
-            cursor_datetime = start_datetime
-
-        start_datetime = max(cursor_datetime, start_datetime)
-
-        state_cursor_value = stream_state.get(self.cursor_field.eval(self.config, stream_state=stream_state))
-
-        if state_cursor_value:
-            state_date = self.parse_date(state_cursor_value)
-        else:
-            state_date = None
-        if state_date:
-            # If the input_state's date is greater than start_datetime, the start of the time window is the state's next day
-            next_date = state_date + datetime.timedelta(days=1)
-            start_datetime = max(start_datetime, next_date)
-        dates = self._partition_daterange(start_datetime, end_datetime, self._step)
-        return dates
+            return self.parse_date(stream_state[self.cursor_field.eval(self.config)]) + datetime.timedelta(days=1)
+        return datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
 
     def _format_datetime(self, dt: datetime.datetime):
         return self._parser.format(dt, self.datetime_format)
