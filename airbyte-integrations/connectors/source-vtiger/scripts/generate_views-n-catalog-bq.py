@@ -109,6 +109,10 @@ def generate_views():
             if short_view_name =='children':
                 short_view_name = 'persons';
 
+            # rename model/table for consistency (for some reason vtiger calls it mod_comments?)
+            if short_view_name =='mod_comments':
+                short_view_name = 'comments';
+
             view_name = "reports." + short_view_name
             # dbt will generate view name based on the file name
             create_view = "{{ config(materialized='view') }}\n\nSELECT " #"CREATE OR REPLACE VIEW " + view_name + " AS" + "\nSELECT "
