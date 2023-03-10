@@ -99,6 +99,13 @@ def gen_schema(in_json_details):
         field_json = field_json.replace("<db_type>", db_type)
 
         all_fields = all_fields + field_json
+        if entity_name == "Payments" and fld_name == "amount":
+            field_json = field_template
+            field_json = field_json.replace("<name>", "amount_currency_value")
+            field_json = field_json.replace("<label>", "amount_currency_value")
+            field_json = field_json.replace("<dblabel>", "amount in orginal payment currency")
+            field_json = field_json.replace("<db_type>", "varchar")
+            all_fields = all_fields + field_json
 
     all_fields = all_fields[:-2] + '\n'
     all_fields = schema_prefix + all_fields + schema_postfix
