@@ -10,7 +10,7 @@ from pathlib import Path
 def generate_views():
     cwd = os.getcwd()
     path_schemas = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}schemas'))
-    path_ddl_out = os.path.abspath(os.path.join(cwd, 'output-ddl'))
+    path_ddl_out = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}output-ddl'))
 
     # create the output directory if it does not exist yet
     Path(path_ddl_out).mkdir(exist_ok=True)
