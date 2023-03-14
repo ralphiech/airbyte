@@ -16,4 +16,4 @@ rm sample_files/configured_catalog.json
 
 echo 'generate configured_catalog.json and ddl files'
 echo '*************************'
-python3 ./scripts/generate_views-n-catalog.py
+python3 ./scripts/generate_views-n-catalog-bq.py
