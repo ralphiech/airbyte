@@ -8,7 +8,7 @@ def replce_if_dict_elem_exists(in_string, in_dict, in_label ):
     ret = in_string
     # replace with value if there is one else with an empty string
     if in_label in in_dict:
-        ret = in_string.replace(f"<{in_label}>", in_dict[in_label])
+        ret = in_string.replace(f"<{in_label}>", in_dict[in_label].replace('\n', ''))
     else:
         ret = in_string.replace(f"<{in_label}>", "")
     return ret
