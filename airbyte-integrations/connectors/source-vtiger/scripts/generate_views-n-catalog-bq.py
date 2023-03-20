@@ -10,7 +10,7 @@ from pathlib import Path
 def generate_views():
     cwd = os.getcwd()
     path_schemas = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}schemas'))
-    path_ddl_out = os.path.abspath(os.path.join(cwd, f'source_vtiger{os.sep}output-ddl'))
+    path_ddl_out = os.path.abspath(os.path.join(cwd, 'output-ddl'))
 
     # create the output directory if it does not exist yet
     Path(path_ddl_out).mkdir(exist_ok=True)
@@ -72,7 +72,7 @@ def generate_views():
 
                 # we need to clean the title and convert to lower to be sure we will avoid duplicate column names
                 title_lower = title.lower()
-                replace_chars = " ()';,&.?!-:‘"
+                replace_chars = " ()';,&.?!-:"
                 mapping = alias.maketrans(replace_chars, "_" * len(replace_chars))
                 title_lower = title_lower.translate(mapping)
                 title_lower = p_end.sub("", title_lower)
@@ -104,15 +104,6 @@ def generate_views():
             common_path_prefix = f"{path_ddl_out}{os.sep}"
 
             short_view_name = filename.replace("vtcm_", "").replace(".json", "")
-
-            # rename model/table (it is persons now, used to be children, way back)
-            if short_view_name =='children':
-                short_view_name = 'persons';
-
-            # rename model/table for consistency (for some reason vtiger calls it mod_comments?)
-            if short_view_name =='mod_comments':
-                short_view_name = 'comments';
-
             view_name = "reports." + short_view_name
             # dbt will generate view name based on the file name
             create_view = "{{ config(materialized='view') }}\n\nSELECT " #"CREATE OR REPLACE VIEW " + view_name + " AS" + "\nSELECT "
@@ -132,11 +123,9 @@ def generate_views():
                 desc = v["desc"].replace("'", "''")
 
                 print(f"field: {field} > type: {v['type']}")
-                
-                if v['type'] == 'boolean':
-                    field = "CAST(CASE " + field + " WHEN '1' THEN true WHEN '0' THEN false ELSE NULL END AS " + v['type'] + ")"
-                elif v['type'] != 'varchar':
+                if v['type'] != 'varchar':
                     field = "CAST(NULLIF(" + field + ", '') AS " + v['type'] + ")"
+
 
                 if i > 0:
                     create_view = create_view + "\n     , " +field + " AS " + alias
@@ -184,7 +173,7 @@ def generate_catalog():
               "full_refresh"
             ],
             "source_defined_cursor": false,
-            "json_schema":
+            "json_schema": {}
     """
     catalog_element_pos = """      }
         }"""
@@ -203,8 +192,8 @@ def generate_catalog():
             entity_name = filename.replace(".json", "")
             print(filename)
             f = open(os.path.join(path_schemas, filename))
-            data = f.read()
-            data = (' '*10).join((' '*10+data).splitlines(True))
+            # data = f.read() # stop inserting schemas
+            # data = (' '*10).join((' '*10+data).splitlines(True))
             # TODO
             # ADD spaces to beginning of every line
 
@@ -214,7 +203,7 @@ def generate_catalog():
             else:
                 element = "\n" + catalog_element_pre.replace("<,>", ",")
             element = element.replace("<entity-name>", entity_name)
-            element = element + data + catalog_element_pos
+            element = element + catalog_element_pos #  + data stop inserting schemas
             catalog_bdy = catalog_bdy + element
 
     print("::: Loop End :::")
@@ -224,12 +213,12 @@ def generate_catalog():
         write_file.write(output)
         write_file.close()
 
-generate_views()
+# generate_views()
 generate_catalog()
 # print(os.getcwd())
 
 # cwd = os.getcwd()
-# path_schemas = os.path.join(cwd, f'..{os.sep}source-vtiger{os.sep}schemas')
+# path_schemas = os.path.join(cwd, f'source-vtiger{os.sep}schemas')
 # print(path_schemas)
 # print(os.path.abspath(path_schemas))
 
